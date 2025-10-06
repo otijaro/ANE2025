@@ -1,0 +1,16 @@
+h_simulador_ane/
+├─ h_simulador/                # Paquete Python (dominio + UI de escritorio)
+│  ├─ __init__.py
+│  ├─ utils.py                 # frange, UnitsConverter
+│  ├─ models.py                # Entity, Aircraft, FMTransmitter, ControlTower, Scene
+│  ├─ controller.py            # SceneController (lógica, cálculos, señales)
+│  └─ ui/
+│     ├─ __init__.py
+│     ├─ canvas.py             # CanvasWidget (pintado + arrastre + líneas)
+│     ├─ stats.py              # StatsWidget (estadística avión/torre por emisora)
+│     ├─ fm_list.py            # FMListWidget (tabla editable)
+│     ├─ hud.py                # HUDWidget (resumen corto)
+│     ├─ dialogs.py            # AddFmDialog (crear emisora 1 a 1)
+│     └─ main_window.py        # MainWindow (menus, docks, save/load)
+├─ run_desktop.py              # Punto de entrada (PySide6)
+└─ requirements.txt            # PySide6 (y lo que sumemos)
