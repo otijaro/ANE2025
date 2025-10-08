@@ -1,67 +1,64 @@
-H.SimuladorPythonANE
+# H.SimuladorPythonANE
 
-Simulador 2D (en km) para estudiar interferencias FM entre emisoras, un avión y una torre de control.
-Permite arrastrar entidades con el mouse, agregar emisoras una a una, ver líneas de propagación con distancia y FSPL, editar frecuencia/potencia en una tabla, y guardar/cargar la escena en JSON.
+Simulador 2D (en km) para estudiar **interferencias FM** entre **emisoras**, un **avión** y una **torre de control**.  
+Permite **arrastrar** entidades con el mouse, **agregar emisoras** una a una, ver **líneas de propagación** con **distancia y FSPL**, editar **frecuencia/potencia** en una **tabla**, y **guardar/cargar** la escena en formato JSON.
 
-✨ Características
+---
 
-Plano 2D con unidades en kilómetros (escala configurable).
+## ✨ Características
 
-Entidades:
+- **Plano 2D** con unidades en **kilómetros** (escala configurable).
+- Entidades:
+  - **Avión** (arrastrable).
+  - **Emisoras FM** (arrastrables, con `f` y `P` individuales).
+  - **Torre de control** (fija, no arrastrable).
+- **Agregar emisoras** desde un **menú** (diálogo con validación).
+- **Líneas de propagación** FM→Avión con etiquetas (distancia + FSPL).
+- **Tabla editable** (doble clic) para **Nombre, Frecuencia (MHz) y Potencia (kW)**.
+- **Estadísticas**:
+  - Resumen global (min/avg/max FSPL a Avión).
+  - Por emisora: **FSPL a Avión** y **FSPL a Torre** (si existe torre).
+- **Guardar/Cargar** escena (`.json`).
 
-Avión (arrastrable).
+---
 
-Emisoras FM (arrastrables, con f y P individuales).
+## 🗂 Estructura del proyecto
 
-Torre de control (fija, no arrastrable).
-
-Agregar emisoras desde menú (diálogo con validación).
-
-Líneas de propagación FM→Avión con etiqueta (distancia + FSPL).
-
-Tabla editable (doble clic) para Nombre, Frecuencia (MHz) y Potencia (kW).
-
-Estadísticas:
-
-Resumen global (min/avg/max FSPL a Avión).
-
-Por emisora: FSPL a Avión y FSPL a Torre (si existe torre).
-
-Guardar/Cargar escena (.json).
-
-🗂 Estructura del proyecto
 h_simulador_ane/
-├─ run_desktop.py                # punto de entrada de escritorio (PySide6)
+├─ run_desktop.py # punto de entrada de escritorio (PySide6)
 ├─ requirements.txt
-└─ h_simulador/                  # paquete Python (dominio + UI)
-   ├─ __init__.py
-   ├─ utils.py                   # frange, UnitsConverter
-   ├─ models.py                  # Entity, Aircraft, FMTransmitter, ControlTower, Scene
-   ├─ controller.py              # SceneController (lógica, señales, FSPL, stats)
-   └─ ui/
-      ├─ __init__.py
-      ├─ canvas.py               # CanvasWidget (pintado + arrastre + LOS)
-      ├─ dialogs.py              # AddFmDialog (crear emisoras 1 a 1)
-      ├─ fm_list.py              # FMListWidget (tabla editable)
-      ├─ hud.py                  # HUDWidget (resumen Avión + “más cercana”)
-      ├─ main_window.py          # MainWindow (menús, docks, persistencia)
-      └─ stats.py                # StatsWidget (resumen + FSPL Avión/Torre por emisora)
+└─ h_simulador/ # paquete Python (dominio + UI)
+├─ init.py
+├─ utils.py # frange, UnitsConverter
+├─ models.py # Entity, Aircraft, FMTransmitter, ControlTower, Scene
+├─ controller.py # SceneController (lógica, señales, FSPL, stats)
+└─ ui/
+├─ init.py
+├─ canvas.py # CanvasWidget (pintado + arrastre + LOS)
+├─ dialogs.py # AddFmDialog (crear emisoras 1 a 1)
+├─ fm_list.py # FMListWidget (tabla editable)
+├─ hud.py # HUDWidget (resumen Avión + “más cercana”)
+├─ main_window.py # MainWindow (menús, docks, persistencia)
+└─ stats.py # StatsWidget (resumen + FSPL Avión/Torre por emisora)
 
 
-Si mueves run_desktop.py dentro del paquete, ejecútalo como módulo: python -m h_simulador.run_desktop.
+> Si mueves `run_desktop.py` dentro del paquete, ejecútalo como módulo: `python -m h_simulador.run_desktop`.
 
-🛠 Requisitos
+---
 
-Python 3.10+ (probado en 3.11).
+## 🛠 Requisitos
 
-PySide6.
+- Python **3.10+** (probado en 3.11).
+- **PySide6**.
 
 Instalación rápida:
 
+```bash
 # Windows / Linux / macOS
-python -m pip install -r requirements.txt
+python -m pip install -r .\requirements.txt
 # o bien
 python -m pip install PySide6
+
 
 ▶️ Ejecución
 Opción A (recomendada): run_desktop.py fuera del paquete
@@ -178,7 +175,7 @@ Reusar to_dict/from_dict para mensajes API.
 
 Añadir tests unitarios para controller.py (FSPL, stats, validaciones).
 
-🩺 Solución de problemas
+🧪 Solución de problemas
 
 ModuleNotFoundError: No module named 'h_simulador'
 Asegúrate de:
@@ -212,6 +209,3 @@ Sigue la estructura modular del paquete.
 
 Envía PR con descripción clara (capturas si aplica).
 
-📄 Licencia
-
-Pendiente de definir por ANE/UIS. (placeholder)
