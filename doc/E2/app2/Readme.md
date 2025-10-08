@@ -23,7 +23,7 @@ Permite **arrastrar** entidades con el mouse, **agregar emisoras** una a una, ve
 ---
 
 ## 🗂 Estructura del proyecto
-
+```
 h_simulador_ane/
 ├─ run_desktop.py # punto de entrada de escritorio (PySide6)
 ├─ requirements.txt
@@ -40,11 +40,8 @@ h_simulador_ane/
 ├─ hud.py # HUDWidget (resumen Avión + “más cercana”)
 ├─ main_window.py # MainWindow (menús, docks, persistencia)
 └─ stats.py # StatsWidget (resumen + FSPL Avión/Torre por emisora)
+```
 
-
-> Si mueves `run_desktop.py` dentro del paquete, ejecútalo como módulo: `python -m h_simulador.run_desktop`.
-
----
 
 ## 🛠 Requisitos
 
