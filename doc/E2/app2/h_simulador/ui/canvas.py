@@ -93,6 +93,14 @@ class CanvasWidget(QtWidgets.QWidget):
 
         painter.end()
 
+    def world_to_screen_px(self, x_km: float, y_km: float) -> Tuple[int, int]:
+        """Convierte coordenadas (km) a coordenadas en píxeles en el widget."""
+        scene_w_px = int(self.controller.scene.ancho_km * self.units.km_to_px)
+        scene_h_px = int(self.controller.scene.alto_km * self.units.km_to_px)
+        sx = int(round(x_km * self.units.km_to_px))
+        sy = int(round(scene_h_px - y_km * self.units.km_to_px))
+        return sx, sy
+
     # helpers dibujo
     def _draw_label(self, painter: QtGui.QPainter, x:int, y:int, text:str, bg="#102a43"):
         metrics = painter.fontMetrics()
@@ -117,10 +125,14 @@ class CanvasWidget(QtWidgets.QWidget):
 
     def _draw_tower(self, painter, x, y, e: ControlTower):
         painter.setBrush(QtGui.QColor("#9aa5b1"))
-        painter.setPen(QtGui.QPen(QtGui.QColor("#e2e8f0"),2))
-        painter.drawRect(x-8,y-8,16,16); painter.drawLine(x, y-8, x, y-24)
-        painter.drawLine(x, y-24, x-6, y-14); painter.drawLine(x, y-24, x+6, y-14)
-        painter.setPen(QtGui.QPen(QtGui.QColor("#ffffff"))); painter.drawText(x-22, y-28, "Torre")
+        painter.setPen(QtGui.QPen(QtGui.QColor("#e2e8f0"), 2))
+        painter.drawRect(x-8, y-8, 16, 16)  # Rectángulo base de la torre
+        painter.drawLine(x, y-8, x, y-24)  # Línea hacia arriba
+        painter.drawLine(x, y-24, x-6, y-14)  # Soporte izquierdo
+        painter.drawLine(x, y-24, x+6, y-14)  # Soporte derecho
+        painter.setPen(QtGui.QPen(QtGui.QColor("#ffffff")))
+        painter.drawText(x-22, y-28, "Torre")
+
 
     def _draw_generic(self, painter, x, y, e: Entity):
         painter.setBrush(QtGui.QColor("#cccccc"))
@@ -130,34 +142,87 @@ class CanvasWidget(QtWidgets.QWidget):
     # --- arrastre ---
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
         if event.button() == QtCore.Qt.LeftButton:
-            self.setFocus(); self._last_mouse_pos = event.position().toPoint()
+            self.setFocus()
+            self._last_mouse_pos = event.position().toPoint()
             clicked_id = self._hit_test(self._last_mouse_pos)
-            if clicked_id: self._drag_entity_id = clicked_id
+            if clicked_id:
+                self._drag_entity_id = clicked_id
 
     def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
-        if not self._drag_entity_id: return
-        pos = event.position().toPoint()
-        dx = pos.x()-self._last_mouse_pos.x(); dy = pos.y()-self._last_mouse_pos.y()
-        self._last_mouse_pos = pos
-        dx_km = dx / self.units.km_to_px
-        dy_km = -dy / self.units.km_to_px
-        e = self.controller.get_entity(self._drag_entity_id)
-        if e and not isinstance(e, ControlTower):
-            self.controller.set_position(e.id, e.x_km+dx_km, e.y_km+dy_km)
+        if self._drag_entity_id:
+            pos = event.position().toPoint()
+            dx = pos.x() - self._last_mouse_pos.x()
+            dy = pos.y() - self._last_mouse_pos.y()
+            self._last_mouse_pos = pos
+            dx_km = dx / self.units.km_to_px
+            dy_km = -dy / self.units.km_to_px
+            e = self.controller.get_entity(self._drag_entity_id)
+            if e:
+                self.controller.set_position(e.id, e.x_km + dx_km, e.y_km + dy_km)
+
+
 
     def mouseReleaseEvent(self, event: QtGui.QMouseEvent) -> None:
         if event.button() == QtCore.Qt.LeftButton: self._drag_entity_id = None
 
-    def _hit_test(self, p: QtCore.QPoint) -> Optional[str]:
+    def _hit_test(self, p: QtCore.QPoint):
         sel_radius_px = 14
         scene_h_px = int(self.controller.scene.alto_km * self.units.km_to_px)
-        def world_to_screen_px(x_km: float, y_km: float) -> Tuple[int,int]:
+
+        def world_to_screen_px(x_km: float, y_km: float):
             sx = int(round(x_km * self.units.km_to_px))
             sy = int(round(scene_h_px - y_km * self.units.km_to_px))
             return sx, sy
+
         for e in reversed(self.controller.scene.entities or []):
-            if isinstance(e, ControlTower): continue
+            # Permitimos torre
             sx, sy = world_to_screen_px(e.x_km, e.y_km)
             if abs(p.x()-sx) <= sel_radius_px and abs(p.y()-sy) <= sel_radius_px:
                 return e.id
         return None
+
+
+    def paintEvent(self, event: QtGui.QPaintEvent) -> None:
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+
+        # Fondo: Dibujamos imagen de mapa
+        try:
+            map_image = QtGui.QImage("path/to/your/map/image.png")
+            painter.drawImage(0, 0, map_image)  # Dibujamos el mapa completo
+        except Exception as e:
+            print(f"Error al cargar la imagen del mapa: {e}")
+
+        # Dibujo de las entidades (emisoras, torre, avión)
+        for e in self.controller.scene.entities:
+            sx, sy = self.world_to_screen_px(e.x_km, e.y_km)  # Calcula la posición correcta en píxeles
+            if isinstance(e, FMTransmitter):
+                self._draw_fm(painter, sx, sy, e)
+            elif isinstance(e, Aircraft):
+                self._draw_aircraft(painter, sx, sy, e)
+            elif isinstance(e, ControlTower):
+                self._draw_tower(painter, sx, sy, e)  # Aquí dibujamos la torre
+            else:
+                self._draw_generic(painter, sx, sy, e)
+
+        # Líneas de propagación FM → Avión (con etiquetas por línea)
+        av = self.controller.get_aircraft()
+        if self._show_propagation and av:
+            line_pen = QtGui.QPen(QtGui.QColor("#ff6347"))
+            line_pen.setWidth(2)  # Un poco más gruesa para que se vea bien
+            painter.setPen(line_pen)
+            for fm in self.controller.get_all_fms():
+                sx1, sy1 = self.world_to_screen_px(fm.x_km, fm.y_km)
+                sx2, sy2 = self.world_to_screen_px(av.x_km, av.y_km)
+                painter.drawLine(sx1, sy1, sx2, sy2)
+
+                if self._show_propagation_labels:
+                    # Etiqueta en el punto medio: distancia y FSPL
+                    midx = (sx1 + sx2) // 2
+                    midy = (sy1 + sy2) // 2
+                    d_km = math.hypot(fm.x_km - av.x_km, fm.y_km - av.y_km)
+                    f_mhz = fm.f_Hz / 1e6
+                    fspl = SceneController.compute_fspl_db(d_km, f_mhz)
+                    self._draw_label(painter, midx, midy - 16, f"{fm.nombre}: {d_km:.2f} km / {fspl:.1f} dB")
+
+        painter.end()

@@ -11,7 +11,7 @@ class FMListWidget(QtWidgets.QWidget):
         lay = QtWidgets.QVBoxLayout(self); self.setLayout(lay)
 
         title = QtWidgets.QLabel("Emisoras (doble clic para editar)")
-        title.setStyleSheet("color:#d1e8ff; font-weight:bold;")
+        title.setStyleSheet("color:#0000A0; font-weight:bold;")
         lay.addWidget(title)
 
         self.table = QtWidgets.QTableWidget(0,5,self)

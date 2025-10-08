@@ -14,38 +14,43 @@ from .dialogs import AddFmDialog
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("H.SimuladorPythonANE — Modular")
+        self.setWindowTitle("H.SimuladorPythonANE — Google Maps")
 
-        # Escena inicial
+        # Configura la escena inicial y el controller
         scene = Scene(ancho_km=100.0, alto_km=60.0, frecuencia_Hz=100e6)
         avion = Aircraft(id="AVION1", nombre="Avión", x_km=50.0, y_km=30.0, h_km=2.0)
         fm1 = FMTransmitter(id="FM_1", nombre="FM_1", x_km=30.0, y_km=15.0, h_km=0.1, potencia_W=10e3, f_Hz=100e6)
         scene.entities.extend([avion, fm1])
 
         self.controller = SceneController(scene)
-        # Torre inicial en una esquina interna
         self.controller.add_control_tower(5.0, 5.0, 0.05)
 
         self.units = UnitsConverter(km_to_px=10.0)
 
-        # Centro (canvas)
+        # Crear Canvas (ahora con mapa)
         self.canvas = CanvasWidget(self.controller, self.units)
         self.setCentralWidget(self.canvas)
 
-        # Docks
+        # Añadir controles, como en el ejemplo anterior
         self.hud = HUDWidget(self.controller)
-        dock_hud = QtWidgets.QDockWidget("HUD", self); dock_hud.setWidget(self.hud)
+        dock_hud = QtWidgets.QDockWidget("HUD", self)
+        dock_hud.setWidget(self.hud)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_hud)
 
         self.fm_list = FMListWidget(self.controller)
-        dock_list = QtWidgets.QDockWidget("Listado de Emisoras", self); dock_list.setWidget(self.fm_list)
+        dock_list = QtWidgets.QDockWidget("Listado de Emisoras", self)
+        dock_list.setWidget(self.fm_list)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_list)
 
         self.stats = StatsWidget(self.controller)
-        dock_stats = QtWidgets.QDockWidget("Estadísticas", self); dock_stats.setWidget(self.stats)
+        dock_stats = QtWidgets.QDockWidget("Estadísticas", self)
+        dock_stats.setWidget(self.stats)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dock_stats)
 
-        self._build_actions(); self._build_menu(); self._build_toolbar()
+        # Configurar menús y barra de herramientas (igual que antes)
+        self._build_actions()
+        self._build_menu()
+        self._build_toolbar()
         self.resize(1200, 800)
 
     # --- acciones/menús/toolbar ---

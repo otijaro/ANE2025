@@ -24,7 +24,7 @@ class StatsWidget(QtWidgets.QWidget):
     def set_text_color(self, color_css: str):
         self.label.setStyleSheet(f"color:{color_css}; font-family:monospace;")
 
-    def update_stats(self):
+    '''def update_stats(self):
         overview = self.controller.stats_overview()
         if overview["count"] == 0:
             self.label.setText("No hay emisoras.")
@@ -60,4 +60,27 @@ class StatsWidget(QtWidgets.QWidget):
             else:
                 lines.append(f" - {nombre:<16}  {d_av:>6.2f}   {L_av:>10.2f}   {fMHz:>6.2f}  {p_kW:>5.2f}")
 
+        self.label.setText("\n".join(lines))'''
+    def update_stats(self):
+        overview = self.controller.stats_overview()
+        lines = []
+        if overview["count"] == 0:
+            self.label.setText("No hay emisoras.")
+            return
+        
+        best = overview["best_fm"]
+        lines.append(f"N° emisoras: {overview['count']}")
+        lines.append(f"Potencia total: {overview['p_total_kW']:.2f} kW")
+        lines.append(f"FSPL min/avg/max (FM→Avión): {overview['fspl_min']:.2f} / {overview['fspl_avg']:.2f} / {overview['fspl_max']:.2f} dB")
+        lines.append(f"Mejor FM→Avión: {best['nombre']} (d={best['d_km']:.2f} km, FSPL={best['fspl_dB']:.2f} dB)")
+        lines.append("")  # espacio en blanco
+
+        # Ahora muestra también FSPL hacia la Torre
+        tower = self.controller.get_control_tower()
+        if tower:
+            rows_tw = self.controller.fspl_all_to_target(tower)
+            for fm in rows_tw:
+                lines.append(f" - {fm['nombre']} → d={fm['d_km']:.2f} km, FSPL a Torre={fm['fspl_dB']:.2f} dB")
+
+        # Finaliza la impresión
         self.label.setText("\n".join(lines))

@@ -48,7 +48,7 @@ class HUDWidget(QtWidgets.QWidget):
                 f"<div style='font-family:monospace'>"
                 f"<span style='color:{col_label}'>Avión:</span> "
                 f"<span style='color:{col_val}'>({av.x_km:.2f} km, {av.y_km:.2f} km, h={av.h_km:.2f} km)</span><br>"
-                f"<span style='color:#ff8080'>Sin emisoras.</span>"
+                f"<span style='color:#00ff80'>Sin emisoras.</span>"
                 f"</div>"
             )
 

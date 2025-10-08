@@ -19,6 +19,16 @@ class SceneController(QtCore.QObject):
             if e.id == entity_id:
                 return e
         return None
+    
+    def move_control_tower(self, x_km: float, y_km: float):
+        """Permite mover la torre de control."""
+        tower = self.get_control_tower()
+        if tower:
+            tower.move_to(x_km, y_km)
+            self.sceneChanged.emit()
+            self.hudChanged.emit()
+
+
 
     def get_aircraft(self) -> Optional[Aircraft]:
         for e in self.scene.entities:
