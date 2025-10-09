@@ -1,6 +1,6 @@
 from __future__ import annotations
 from PySide6 import QtCore, QtWidgets
-from ..controller import SceneController
+from ..controller_qt import SceneController
 
 class StatsWidget(QtWidgets.QWidget):
     """Resumen global + pérdidas por emisora hacia Avión y Torre."""

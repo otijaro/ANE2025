@@ -3,7 +3,7 @@ import json
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from ..models import Scene, Aircraft, FMTransmitter
-from ..controller import SceneController
+from ..controller_qt import SceneController
 from ..utils import UnitsConverter
 from .canvas import CanvasWidget
 from .stats import StatsWidget

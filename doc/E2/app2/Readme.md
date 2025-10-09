@@ -40,6 +40,30 @@ h_simulador_ane/
 ├─ hud.py # HUDWidget (resumen Avión + “más cercana”)
 ├─ main_window.py # MainWindow (menús, docks, persistencia)
 └─ stats.py # StatsWidget (resumen + FSPL Avión/Torre por emisora)
+
+#Web and Desktop
+h_simulador_ane/
+├─ run_desktop.py          # Desktop PySide6
+├─ web_api/
+  ├─ main.py              # FastAPI app
+  ├─ requirements.txt
+  └─ app/
+      ├─ __init__.py
+      ├─ schemas.py       # Modelos Pydantic para requests/responses
+      └─ api.py           # Endpoints de FastAPI
+├─ __init__.py
+├─ models.py
+├─ controller.py
+└─ utils.py
+└─ ui/ (solo desktop)
+    ├─ init.py
+    └─ canvas.py # CanvasWidget (pintado + arrastre + LOS)
+    ├─ dialogs.py # AddFmDialog (crear emisoras 1 a 1)
+    ├─ fm_list.py # FMListWidget (tabla editable)
+    ├─ hud.py # HUDWidget (resumen Avión + “más cercana”)
+    ├─ main_window.py # MainWindow (menús, docks, persistencia)
+    └─ stats.py # StatsWidget (resumen + FSPL Avión/Torre por emisora)
+
 ```
 
 

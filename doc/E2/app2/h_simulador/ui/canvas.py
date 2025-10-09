@@ -3,7 +3,7 @@ import math
 from typing import Optional, Tuple
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from ..controller import SceneController
+from ..controller_qt import SceneController
 from ..models import FMTransmitter, Aircraft, ControlTower, Entity
 from ..utils import frange, UnitsConverter
 

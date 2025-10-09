@@ -14,3 +14,14 @@ h_simulador_ane/
 │     └─ main_window.py        # MainWindow (menus, docks, save/load)
 ├─ run_desktop.py              # Punto de entrada (PySide6)
 └─ requirements.txt            # PySide6 (y lo que sumemos)
+
+#Web
+h_simulador_ane/
+├─ web_api/
+│   ├─ main.py            # FastAPI app
+│   ├─ requirements.txt
+│   └─ app/
+│       ├─ __init__.py
+│       ├─ models.py      # puedes reusar del proyecto desktop
+│       ├─ controller.py  # idem
+│       └─ schemas.py     # Pydantic models para requests/responses

@@ -1,6 +1,6 @@
 from __future__ import annotations
 from PySide6 import QtCore, QtWidgets
-from ..controller import SceneController
+from ..controller_qt import SceneController
 
 class HUDWidget(QtWidgets.QWidget):
     def __init__(self, controller: SceneController, parent=None):

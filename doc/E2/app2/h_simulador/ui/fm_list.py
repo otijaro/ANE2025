@@ -1,6 +1,6 @@
 from __future__ import annotations
 from PySide6 import QtCore, QtWidgets
-from ..controller import SceneController
+from ..controller_qt import SceneController
 
 class FMListWidget(QtWidgets.QWidget):
     COL_NOMBRE=0; COL_F=1; COL_P=2; COL_D=3; COL_FSPL=4

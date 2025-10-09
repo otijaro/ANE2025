@@ -1,0 +1,103 @@
+:root {
+  --bg: #0b1020;
+  --panel: #11162a;
+  --text: #d6e1ff;
+  --accent: #ffd166;
+  --muted: #8ab4ff55;
+  --good: #9ae6b4;
+  --warn: #ffd166;
+  --bad: #ff8080;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--bg);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+header, footer {
+  padding: 10px 16px;
+  background: #0e1430;
+  border-bottom: 1px solid #192046;
+}
+footer {
+  border-top: 1px solid #192046;
+  border-bottom: none;
+}
+
+h1 { font-size: 18px; margin: 6px 0; }
+h2 { font-size: 16px; margin: 0 0 8px; color: var(--accent); }
+
+.actions { display: flex; gap: 8px; }
+button {
+  background: #1a2348;
+  color: var(--text);
+  border: 1px solid #243067;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+
+main {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  height: calc(100vh - 100px);
+}
+
+#left { padding: 10px; }
+#right {
+  padding: 10px;
+  background: var(--panel);
+  border-left: 1px solid #192046;
+  overflow: auto;
+}
+
+.card {
+  background: #0e1430;
+  border: 1px solid #1e2857;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+#scene {
+  width: 100%;
+  height: 100%;
+  background: #0a0f1f;
+  border: 1px solid #192046;
+  border-radius: 10px;
+}
+
+pre {
+  margin: 0;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  color: var(--accent);
+}
+
+form label {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+input {
+  background: #0b1020;
+  border: 1px solid #243067;
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px;
+}
+.row { display: flex; gap: 8px; }
+.entity-label { font-size: 12px; fill: var(--text); }
+.handle { cursor: grab; }
+.handle:active { cursor: grabbing; }
+.grid-line { stroke: #243067; stroke-width: 1; opacity: 0.5; }
+.line-los { stroke: #ff6347; stroke-width: 2; opacity: 0.9; }
+.fm { fill: #4aa3ff; }
+.plane { fill: #4ade80; }
+.tower { fill: #cbd5e1; }
