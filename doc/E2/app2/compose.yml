@@ -18,3 +18,14 @@ services:
       timeout: 3s
       retries: 5
       start_period: 5s
+  web:
+    build:
+      context: ./web_frontend
+      dockerfile: Dockerfile
+    image: h_simulador_web:latest
+    container_name: h_simulador_web
+    ports:
+      - "8081:80"               # cambia a 8080 si lo prefieres y está libre
+    depends_on:
+      api:
+        condition: service_healthy

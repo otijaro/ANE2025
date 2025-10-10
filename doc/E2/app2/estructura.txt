@@ -1,27 +1,63 @@
-h_simulador_ane/
-├─ h_simulador/                # Paquete Python (dominio + UI de escritorio)
-│  ├─ __init__.py
-│  ├─ utils.py                 # frange, UnitsConverter
-│  ├─ models.py                # Entity, Aircraft, FMTransmitter, ControlTower, Scene
-│  ├─ controller.py            # SceneController (lógica, cálculos, señales)
-│  └─ ui/
-│     ├─ __init__.py
-│     ├─ canvas.py             # CanvasWidget (pintado + arrastre + líneas)
-│     ├─ stats.py              # StatsWidget (estadística avión/torre por emisora)
-│     ├─ fm_list.py            # FMListWidget (tabla editable)
-│     ├─ hud.py                # HUDWidget (resumen corto)
-│     ├─ dialogs.py            # AddFmDialog (crear emisora 1 a 1)
-│     └─ main_window.py        # MainWindow (menus, docks, save/load)
-├─ run_desktop.py              # Punto de entrada (PySide6)
-└─ requirements.txt            # PySide6 (y lo que sumemos)
-
-#Web
-h_simulador_ane/
-├─ web_api/
-│   ├─ main.py            # FastAPI app
-│   ├─ requirements.txt
-│   └─ app/
-│       ├─ __init__.py
-│       ├─ models.py      # puedes reusar del proyecto desktop
-│       ├─ controller.py  # idem
-│       └─ schemas.py     # Pydantic models para requests/responses
+│   .dockerignore
+│   compose.yml
+│   Dockerfile
+│   estructura.txt
+│   Readme.md
+│   requirements.txt
+│   run_desktop.py
+│
+├───data
+│       scene.json
+│
+├───h_simulador
+│   │   controller_core.py
+│   │   controller_qt.py
+│   │   models.py
+│   │   utils.py
+│   │   __init__.py
+│   │
+│   ├───ui
+│   │   │   canvas.py
+│   │   │   Cartagena.png
+│   │   │   dialogs.py
+│   │   │   fm_list.py
+│   │   │   hud.py
+│   │   │   main_window.py
+│   │   │   map_widget.py
+│   │   │   stats.py
+│   │   │   __init__.py
+│   │   │
+│   │   └───__pycache__
+│   │           canvas.cpython-311.pyc
+│   │           dialogs.cpython-311.pyc
+│   │           fm_list.cpython-311.pyc
+│   │           hud.cpython-311.pyc
+│   │           main_window.cpython-311.pyc
+│   │           map_widget.cpython-311.pyc
+│   │           stats.cpython-311.pyc
+│   │           __init__.cpython-311.pyc
+│   │
+│   └───__pycache__
+│           controller.cpython-311.pyc
+│           models.cpython-311.pyc
+│           utils.cpython-311.pyc
+│           __init__.cpython-311.pyc
+│
+├───web_api
+│   │   main.py
+│   │   requirements.txt
+│   │   __init__.py
+│   │
+│   └───app
+│           api.py
+│           schemas.py
+│           __init__.py
+│
+└───web_frontend
+    │   Dockerfile
+    │   index.html
+    │   main.js
+    │   styles.css
+    │
+    └───nginx
+            default.conf
