@@ -2,31 +2,19 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile       # <--- el de la raíz (API)
+      dockerfile: Dockerfile
     image: h_simulador_api:latest
     container_name: h_simulador_api
     environment:
-      DATA_DIR: /data
-      CORS_ORIGINS: "*"
+      - DATA_DIR=/data
+      - CORS_ORIGINS=*
     volumes:
       - ./data:/data
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"     # ← publica 8000 al host
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"]
       interval: 10s
       timeout: 3s
       retries: 5
-
-  web:
-    build:
-      context: ./web_frontend
-      dockerfile: Dockerfile
-    image: h_simulador_web:latest
-    container_name: h_simulador_web
-    ports:
-      - "8081:80"   # <— usa 8081 en lugar de 8080
-    depends_on:
-      api:
-        condition: service_healthy
-
+      start_period: 5s
