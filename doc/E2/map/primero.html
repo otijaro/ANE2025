@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>O.simulador_map — MVP Paso 1</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <style>
+    :root{
+      --bg:#0f172a; /* slate-900 */
+      --panel:#111827; /* gray-900 */
+      --card:#0b1220; /* darker card */
+      --muted:#9ca3af; /* gray-400 */
+      --text:#e5e7eb; /* gray-200 */
+      --accent:#38bdf8; /* sky-400 */
+      --accent-2:#22d3ee; /* cyan-400 */
+      --danger:#ef4444; /* red-500 */
+      --ok:#22c55e; /* green-500 */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,"Noto Sans",sans-serif}
+    #app{display:grid;grid-template-columns:360px 1fr;gap:0;height:100%}
+    @media (max-width: 900px){#app{grid-template-columns:1fr;grid-template-rows:52vh 48vh}}
+
+    /* Sidebar */
+    .sidebar{background:var(--panel);border-right:1px solid #1f2937;display:flex;flex-direction:column;min-width:0}
+    .header{display:flex;align-items:center;gap:.5rem;padding:12px 14px;border-bottom:1px solid #1f2937}
+    .header h1{font-size:16px;margin:0;font-weight:600;letter-spacing:.2px}
+    .header .pill{margin-left:auto;font-size:12px;color:var(--muted)}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #1f2937}
+    .btn{background:#0b1220;border:1px solid #1f2937;color:var(--text);padding:8px 10px;border-radius:10px;font-size:13px;cursor:pointer}
+    .btn:hover{border-color:#334155}
+    .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));border-color:transparent;color:#0b1220;font-weight:700}
+    .btn.ghost{background:transparent;border-color:#1f2937}
+    .btn.danger{border-color:#7f1d1d;color:#fecaca;background:#1f0e11}
+    .section{padding:10px 14px;overflow:auto}
+    .section h2{margin:8px 0 6px 0;font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:14px;padding:12px}
+    .row{display:flex;gap:10px}
+    .col{flex:1}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #1f2937;border-radius:12px;background:#0b1220}
+    .item.active{border-color:var(--accent)}
+    .badge{font-size:11px;border:1px solid #1f2937;border-radius:999px;padding:2px 8px;color:var(--muted)}
+    .name{font-weight:600}
+
+    label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
+    input,select,textarea{width:100%;background:#0b1220;border:1px solid #1f2937;border-radius:10px;padding:8px 10px;color:var(--text);font-size:14px}
+    input[readonly]{opacity:.8}
+    .hint{font-size:12px;color:var(--muted)}
+
+    /* Map */
+    #map{width:100%;height:100%}
+
+    /* Footer */
+    .footer{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid #1f2937}
+
+    /* File input hidden */
+    #fileInput{display:none}
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="header">
+      <h1>O.simulador_map</h1>
+      <span class="pill" id="statusPill">MVP · Paso 1</span>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn primary" id="addPointBtn" title="Click en el mapa para agregar">+ Punto</button>
+      <button class="btn" id="saveBtn">Guardar escenario</button>
+      <button class="btn" id="loadBtn">Cargar</button>
+      <input type="file" id="fileInput" accept="application/json" />
+      <button class="btn ghost" id="centerColBtn">Centrar Colombia</button>
+      <button class="btn danger" id="resetBtn" title="Borrar todo">Limpiar</button>
+    </div>
+
+    <div class="section">
+      <h2>Objetos</h2>
+      <div class="card">
+        <div class="list" id="objectList"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Editor</h2>
+      <div class="card">
+        <form id="editForm">
+          <div class="row">
+            <div class="col">
+              <label for="f_nombre">Nombre</label>
+              <input id="f_nombre" name="nombre" placeholder="Sitio A" />
+            </div>
+            <div class="col">
+              <label for="f_tipo">Tipo</label>
+              <select id="f_tipo" name="tipo">
+                <option value="marker">marker</option>
+                <option value="emisor">emisor</option>
+                <option value="receptor">receptor</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col">
+              <label for="f_lat">Latitud</label>
+              <input id="f_lat" name="lat" readonly />
+            </div>
+            <div class="col">
+              <label for="f_lon">Longitud</label>
+              <input id="f_lon" name="lon" readonly />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col">
+              <label for="f_altTerr">Altura terreno (m)</label>
+              <input id="f_altTerr" name="alt_terreno_m" placeholder="(auto más adelante)" />
+              <div class="hint">En el Paso 2 se autocompleta con API de elevación</div>
+            </div>
+            <div class="col">
+              <label for="f_altSobre">Altura sobre terreno (m)</label>
+              <input id="f_altSobre" name="alt_sobre_terreno_m" value="30" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col">
+              <label for="f_freq">Frecuencia (MHz)</label>
+              <input id="f_freq" name="frecuencia_MHz" value="118" />
+            </div>
+            <div class="col">
+              <label for="f_notas">Notas</label>
+              <input id="f_notas" name="notas" placeholder="opcional" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <div class="col">
+              <button type="button" class="btn" id="saveEditBtn">Guardar cambios</button>
+            </div>
+            <div class="col" style="text-align:right">
+              <button type="button" class="btn danger" id="deleteBtn">Eliminar</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span class="hint">Tip: usa <b>+ Punto</b> y luego clic en el mapa.</span>
+    </div>
+  </aside>
+
+  <!-- Map -->
+  <main>
+    <div id="map"></div>
+  </main>
+</div>
+
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+<script>
+(function(){
+  // --- State ---
+  /** @type {{metadata:{nombre:string,descripcion:string,unidad_distancia:string,k_factor:number}, objetos:Array<any>}} */
+  const state = {
+    metadata: {
+      nombre: 'Escenario sin título',
+      descripcion: '',
+      unidad_distancia: 'm',
+      k_factor: 1.33,
+    },
+    objetos: []
+  };
+
+  let map, addMode = false, selectedId = null;
+  /** @type {Record<string, L.Marker>} */
+  const markerIndex = {};
+
+  // --- Map init ---
+  map = L.map('map', { zoomControl: true, attributionControl: true });
+  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+
+  centerColombia();
+
+  // Click to add point
+  map.on('click', (ev) => {
+    if(!addMode) return;
+    const { lat, lng } = ev.latlng;
+    const id = genId();
+    const obj = {
+      id,
+      nombre: `Punto ${state.objetos.length+1}`,
+      tipo: 'marker',
+      lat: +lat.toFixed(6),
+      lon: +lng.toFixed(6),
+      alt_terreno_m: '',
+      alt_sobre_terreno_m: 30,
+      frecuencia_MHz: 118,
+      notas: ''
+    };
+    state.objetos.push(obj);
+    addMarker(obj);
+    renderList();
+    selectObject(id);
+  });
+
+  // --- UI bindings ---
+  document.getElementById('addPointBtn').addEventListener('click', () => {
+    addMode = !addMode;
+    updateAddModeUI();
+  });
+
+  document.getElementById('centerColBtn').addEventListener('click', centerColombia);
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if(confirm('¿Seguro deseas borrar todos los objetos?')){
+      state.objetos.length = 0;
+      Object.values(markerIndex).forEach(m=>m.remove());
+      for(const k in markerIndex) delete markerIndex[k];
+      selectedId = null;
+      renderList();
+      clearForm();
+    }
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (state.metadata?.nombre?.trim() || 'escenario') + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById('loadBtn').addEventListener('click', () => {
+    document.getElementById('fileInput').click();
+  });
+  document.getElementById('fileInput').addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if(!file) return;
+    try{
+      const text = await file.text();
+      const data = JSON.parse(text);
+      // Basic schema tolerance
+      state.metadata = data.metadata || state.metadata;
+      state.objetos = Array.isArray(data.objetos) ? data.objetos : [];
+      // reset markers
+      Object.values(markerIndex).forEach(m=>m.remove());
+      for(const k in markerIndex) delete markerIndex[k];
+      // add markers back
+      state.objetos.forEach(addMarker);
+      renderList();
+      clearForm();
+      // Focus bounds
+      if(state.objetos.length){
+        const latlngs = state.objetos.map(o=>[o.lat,o.lon]);
+        const bounds = L.latLngBounds(latlngs);
+        map.fitBounds(bounds.pad(0.2));
+      }
+    }catch(err){
+      alert('Archivo inválido: ' + err.message);
+    }finally{
+      e.target.value = '';
+    }
+  });
+
+  document.getElementById('saveEditBtn').addEventListener('click', () => {
+    if(!selectedId) return;
+    const idx = state.objetos.findIndex(o=>o.id===selectedId);
+    if(idx<0) return;
+    const o = state.objetos[idx];
+    const f = readForm();
+    Object.assign(o, f);
+    // Update marker position & tooltip
+    const m = markerIndex[selectedId];
+    if(m){
+      m.setLatLng([o.lat,o.lon]);
+      m.bindTooltip(o.nombre, {permanent:true, direction:'top', offset:[0,-18]}).openTooltip();
+    }
+    renderList();
+  });
+
+  document.getElementById('deleteBtn').addEventListener('click', () => {
+    if(!selectedId) return;
+    const idx = state.objetos.findIndex(o=>o.id===selectedId);
+    if(idx<0) return;
+    if(!confirm('Eliminar "'+(state.objetos[idx].nombre||selectedId)+'"?')) return;
+    state.objetos.splice(idx,1);
+    const m = markerIndex[selectedId];
+    if(m){ m.remove(); delete markerIndex[selectedId]; }
+    selectedId = null;
+    renderList();
+    clearForm();
+  });
+
+  // --- Functions ---
+  function centerColombia(){
+    // Bounding box roughly covering Colombia
+    const bounds = L.latLngBounds([[12.6,-81.8],[-4.23,-66.85]]);
+    map.fitBounds(bounds);
+  }
+
+  function genId(){ return 'obj-' + Math.random().toString(36).slice(2,9); }
+
+  function addMarker(obj){
+    const m = L.marker([obj.lat,obj.lon], {draggable:true});
+    m.addTo(map);
+    m.bindTooltip(obj.nombre, {permanent:true, direction:'top', offset:[0,-18]}).openTooltip();
+    m.on('click', ()=> selectObject(obj.id));
+    m.on('dragend', (e)=>{
+      const ll = e.target.getLatLng();
+      obj.lat = +ll.lat.toFixed(6);
+      obj.lon = +ll.lng.toFixed(6);
+      if(selectedId===obj.id){
+        document.getElementById('f_lat').value = obj.lat;
+        document.getElementById('f_lon').value = obj.lon;
+      }
+      renderList();
+    });
+    markerIndex[obj.id] = m;
+  }
+
+  function renderList(){
+    const list = document.getElementById('objectList');
+    list.innerHTML='';
+    if(!state.objetos.length){
+      const empty = document.createElement('div');
+      empty.className='hint';
+      empty.textContent = 'No hay objetos. Usa "+ Punto" y haz clic en el mapa.';
+      list.appendChild(empty);
+      return;
+    }
+    state.objetos.forEach(o=>{
+      const div = document.createElement('div');
+      div.className = 'item' + (o.id===selectedId?' active':'');
+      const dot = document.createElement('div');
+      dot.style.width='10px';dot.style.height='10px';dot.style.borderRadius='999px';
+      dot.style.background = colorByType(o.tipo);
+      const name = document.createElement('div');
+      name.className='name'; name.textContent=o.nombre||o.id;
+      const meta = document.createElement('div');
+      meta.className='badge';
+      meta.textContent = `${o.tipo} · ${o.lat.toFixed(4)}, ${o.lon.toFixed(4)}`;
+      div.append(dot,name,meta);
+      div.addEventListener('click', ()=> selectObject(o.id));
+      list.appendChild(div);
+    });
+  }
+
+  function selectObject(id){
+    selectedId = id;
+    renderList();
+    const o = state.objetos.find(x=>x.id===id);
+    if(!o) return;
+    map.setView([o.lat,o.lon], Math.max(map.getZoom(), 12));
+    fillForm(o);
+  }
+
+  function fillForm(o){
+    document.getElementById('f_nombre').value = o.nombre||'';
+    document.getElementById('f_tipo').value = o.tipo||'marker';
+    document.getElementById('f_lat').value = o.lat;
+    document.getElementById('f_lon').value = o.lon;
+    document.getElementById('f_altTerr').value = o.alt_terreno_m ?? '';
+    document.getElementById('f_altSobre').value = o.alt_sobre_terreno_m ?? '';
+    document.getElementById('f_freq').value = o.frecuencia_MHz ?? '';
+    document.getElementById('f_notas').value = o.notas ?? '';
+  }
+
+  function readForm(){
+    const nombre = document.getElementById('f_nombre').value.trim();
+    const tipo = document.getElementById('f_tipo').value;
+    const lat = parseFloat(document.getElementById('f_lat').value);
+    const lon = parseFloat(document.getElementById('f_lon').value);
+    const alt_terreno_m = parseNumberOrEmpty(document.getElementById('f_altTerr').value);
+    const alt_sobre_terreno_m = parseNumberOrEmpty(document.getElementById('f_altSobre').value);
+    const frecuencia_MHz = parseNumberOrEmpty(document.getElementById('f_freq').value);
+    const notas = document.getElementById('f_notas').value;
+    return { nombre, tipo, lat, lon, alt_terreno_m, alt_sobre_terreno_m, frecuencia_MHz, notas };
+  }
+
+  function parseNumberOrEmpty(v){
+    const n = Number(v);
+    return Number.isFinite(n) ? n : '';
+  }
+
+  function clearForm(){ fillForm({nombre:'',tipo:'marker',lat:'',lon:'',alt_terreno_m:'',alt_sobre_terreno_m:'',frecuencia_MHz:'',notas:''}); }
+
+  function updateAddModeUI(){
+    const btn = document.getElementById('addPointBtn');
+    btn.classList.toggle('primary', addMode);
+    btn.textContent = addMode ? 'Modo: clic para agregar (ON)' : '+ Punto';
+    document.getElementById('statusPill').textContent = addMode ? 'Agregar punto: ACTIVADO' : 'MVP · Paso 1';
+  }
+
+  function colorByType(t){
+    switch(t){
+      case 'emisor': return '#22d3ee';
+      case 'receptor': return '#38bdf8';
+      default: return '#a78bfa';
+    }
+  }
+})();
+</script>
+</body>
+</html>

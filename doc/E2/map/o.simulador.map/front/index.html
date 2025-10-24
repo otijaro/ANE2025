@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>O.simulador_map — Sprint 2</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <style>
+    html, body { height: 100%; }
+    body{ margin:0; display:grid; grid-template-columns:380px 1fr; height:100vh; font-family:system-ui; }
+
+    main { position: relative; height:100vh; overflow:hidden; } /* clave para posicionar leyenda/modal */
+    #map  { position: relative; width:100%; height:100%; }     /* ♥ altura real */
+    #heatCanvas { z-index:450; pointer-events:none; }
+    aside{padding:10px;border-right:1px solid #e5e7eb;overflow:auto}
+    .btn{padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;margin-right:6px}
+    .list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+    .item{padding:8px;border:1px solid #e5e7eb;border-radius:10px}
+    label{display:block;font-size:12px;color:#6b7280;margin-top:6px}
+    input,select{width:100%;padding:6px;border:1px solid #e5e7eb;border-radius:8px}
+    .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+    #profile{border:1px solid #e5e7eb;border-radius:10px;background:#fff;margin-top:10px;padding:6px}
+  </style>
+</head>
+<body>
+  <aside>
+    <h3>Simulador</h3>
+    <div class="row">
+      <button id="centerSkcgBtn" class="btn" title="Centrar Aeropuerto de Cartagena">Centrar SKCG</button>
+    </div>
+
+    <details open>
+      <summary><b>Componentes</b></summary>
+      <div class="row" style="margin-top:6px">
+        <button id="addBtn" class="btn">+ Componente (clic en mapa)</button>
+        <button id="saveBtn" class="btn">Guardar JSON</button>
+        <button id="loadBtn" class="btn">Cargar JSON</button>
+        <button id="saveSrv" class="btn">Guardar en servidor</button>
+        <button id="loadSrv" class="btn">Cargar del servidor</button>
+        <input type="file" id="fileInput" accept="application/json" style="display:none" />
+      </div>
+      <div class="list" id="list" style="margin-top:8px"></div>
+    </details>
+
+    <details open>
+        <summary><b>Interferencia (demo)</b></summary>
+        <label>Receptor</label>
+        <select id="rxSelect"></select>
+        <label>Ventana (±kHz)</label>
+        <input id="winKhz" type="number" value="500" />
+        <label>Orden máx (2–5)</label>
+        <input id="ordMax" type="number" value="3" min="2" max="5" />
+        <label>Filtro</label>
+        <select id="filterPreset"></select>
+        <button id="calcBtn" class="btn" style="margin-top:8px">Calcular</button>
+        <pre id="result" style="white-space:pre-wrap;background:#f9fafb;border:1px solid #e5e7eb;padding:8px;border-radius:10px;margin-top:8px;max-height:22vh;overflow:auto"></pre>
+        <label>Opacidad</label>
+        <input id="hmOpacity" type="range" min="0.2" max="0.95" step="0.05" value="0.65" style="width:120px">
+        <span id="hmOpacityVal" style="font-size:12px;color:#6b7280">0.65</span>
+        <button id="hmClear" class="btn">Borrar mapa</button>
+    </details>
+
+    <details open>
+      <summary><b>Perfil & LOS</b></summary>
+      <div class="row">
+        <label style="flex:1">TX</label>
+        <select id="txSelect" style="flex:2"></select>
+      </div>
+      <div class="row">
+        <label style="flex:1">RX</label>
+        <select id="rxSelect2" style="flex:2"></select>
+      </div>
+      <div class="row">
+        <label>f (MHz)</label>
+        <input id="fMHz" type="number" value="118.1" step="0.001" style="width:120px" />
+        <label>k-factor</label>
+        <input id="kFactor" type="number" value="1.33" step="0.01" style="width:100px" />
+        <button id="losBtn" class="btn">Perfil y LOS</button>
+      </div>
+      <div id="profile">
+        <svg id="profileSvg" viewBox="0 0 800 240" width="100%" height="240"></svg>
+        <div id="losInfo" style="font-size:12px;color:#111827;margin-top:6px"></div>
+      </div>
+    </details>
+
+    <details open>
+      <summary><b>Rutas (GPX/CSV) y Vuelo guiado</b></summary>
+      <div class="row" style="margin-top:6px">
+        <input type="file" id="airwayFile" accept=".geojson,.json" />
+        <label><input type="checkbox" id="snapAirway"/> Snap a aerovía</label>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <input type="file" id="routeFile" accept=".gpx,.csv" />
+        <button id="routePlay" class="btn">▶︎ Play</button>
+        <button id="routePause" class="btn">⏸︎ Pause</button>
+        <label>Vel (x)</label><input id="routeSpeed" type="number" value="1" step="0.5" style="width:80px"/>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <label><input type="checkbox" id="routeLiveLOS" checked/> Actualizar LOS</label>
+        <label><input type="checkbox" id="routeLiveINT" checked/> Actualizar Interferencia</label>
+      </div>
+    </details>
+
+    <details open>
+      <summary><b>Mapa de interferencia (Cerro de la Popa)</b></summary>
+      <div class="row" style="margin-top:6px">
+        <label>f RX (MHz)</label><input id="hmFRx" type="number" value="118.1" step="0.001" style="width:100px"/>
+        <label>±kHz</label><input id="hmWin" type="number" value="150" step="10" style="width:80px"/>
+        <label>Radio (km)</label><input id="hmRad" type="number" value="3" step="0.5" style="width:80px"/>
+        <label>Step (m)</label><input id="hmStep" type="number" value="200" step="50" style="width:90px"/>
+        <button id="hmBtn" class="btn">Generar mapa</button>
+      </div>
+    </details>
+  </aside>
+
+  <main>
+    <div id="map">
+      <canvas id="heatCanvas" style="position:absolute; inset:0; z-index:450; pointer-events:none;"></canvas>
+    </div>
+
+    <!-- Leyenda -->
+    <div id="legend" style="
+      position:absolute; right:10px; bottom:10px; background:white;
+      border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:12px;">
+      <div style="margin-bottom:4px; font-weight:600;">Interferencia (dBm)</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div id="legendBar" style="width:140px; height:10px; background:linear-gradient(90deg,#22c55e,#84cc16,#f59e0b,#f97316,#ef4444);"></div>
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <div>−130</div><div>−100</div><div>−80</div><div>−60</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" style="position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.3);">
+      <div style="width:720px; max-width:95vw; background:white; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid #e5e7eb;">
+          <strong id="modalTitle">Interferencias</strong>
+          <button id="modalClose" class="btn">Cerrar</button>
+        </div>
+        <div style="padding:10px 14px;">
+          <div style="display:flex; gap:6px; margin-bottom:8px;">
+            <button class="btn" data-tab="carriers">Portadoras</button>
+            <button class="btn" data-tab="im2">IM2</button>
+            <button class="btn" data-tab="im3">IM3</button>
+          </div>
+          <div id="tab_carriers"></div>
+          <div id="tab_im2" style="display:none;"></div>
+          <div id="tab_im3" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script>
+    const API = (localStorage.getItem('API_BASE') || 'http://127.0.0.1:8000');
+    const SKCG = { lat: 10.442, lon: -75.513, zoom: 13 };
+
+    const map = L.map('map').setView([SKCG.lat, SKCG.lon], SKCG.zoom);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'&copy; OpenStreetMap'}).addTo(map);
+
+    const layers = { torre:L.layerGroup().addTo(map), antena:L.layerGroup().addTo(map), avion:L.layerGroup().addTo(map), receptor:L.layerGroup().addTo(map) };
+    L.control.layers(null, {"Torres":layers.torre, "Antenas":layers.antena, "Aviones":layers.avion, "Receptores":layers.receptor}, {collapsed:true, position:'topright'}).addTo(map);
+
+    // Cerro de la Popa (aprox)
+    const LA_POPA = { lat: 10.422, lon: -75.519 };
+
+    // Capa para heatmap (polígonos opcionales; usamos canvas suave)
+    const heatLayer = L.layerGroup().addTo(map);
+    L.control.layers(null, { "Heatmap Interferencia": heatLayer }, { collapsed:true, position:'topright' }).addTo(map);
+
+    // Presets de filtro
+    const FILTER_PRESETS = {
+      "Cavity 8 polos (VHF COM)": {"0":0,"12.5":12,"25":25,"50":48,"75":60,"100":72,"150":85,"200":95,"300":110,"500":120},
+      "BPF comercial (ancho 200 kHz)": {"0":0,"25":8,"50":14,"100":24,"150":35,"200":45,"300":60,"500":80},
+      "Notch FM (centro 100 MHz)": {"center_MHz":100.0,"curve":{"0":80,"50":60,"100":40,"200":20,"400":8,"800":2}}
+    };
+    (function loadFilterPresets(){
+      const sel = document.getElementById('filterPreset');
+      Object.keys(FILTER_PRESETS).forEach(name=>{
+        const opt = document.createElement('option'); opt.value = name; opt.textContent = name; sel.appendChild(opt);
+      });
+      sel.value = "BPF comercial (ancho 200 kHz)";
+    })();
+    function buildFilterCurve(f_rx_MHz){
+      const name = document.getElementById('filterPreset').value;
+      const p = FILTER_PRESETS[name];
+      if(p.center_MHz){ return p; } // notch: lo tratamos en el back cuando apliquemos centro
+      return p;
+    }
+
+    // === Iconos SVG (con rotación) ===
+    function svgIcon(svg, extraTransform=""){
+      return L.divIcon({ className:'div-marker', html:`<div style="transform:translateY(-4px) ${extraTransform}; transform-origin:center;">${svg}</div>`, iconSize:[10,10], iconAnchor:[10,10] });
+    }
+    const ICONS = {
+      torre:(name)=> svgIcon(`<svg width="90" height="28" viewBox="0 0 90 28" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#7c3aed" stroke-width="2"><rect x="2" y="8" width="18" height="18" fill="#ffffff" stroke="#7c3aed" rx="3"/><path d="M6,26 L15,8"/><path d="M16,26 L7,8"/><circle cx="11" cy="6" r="3" fill="#7c3aed"/><path d="M11 1 L11 5"/></g><text x="24" y="18" font-size="12" fill="#111827" font-weight="700">${name||'Torre'}</text></svg>`),
+      antena:(name)=> svgIcon(`<svg width="120" height="28" viewBox="0 0 120 28" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#2563eb" stroke-width="2"><path d="M10 26 L10 10"/><circle cx="10" cy="8" r="3" fill="#2563eb"/><path d="M2 26 H18"/><path d="M16 8 C22 6, 22 2, 16 0" /><path d="M20 10 C30 6, 30 -2, 20 -4" opacity=".6" /><path d="M24 12 C38 6, 38 -4, 24 -8" opacity=".3" /></g><text x="36" y="18" font-size="12" fill="#111827" font-weight="700">${name||'Antena FM'}</text></svg>`),
+      avion:(name, headingDeg=0)=> svgIcon(`
+        <svg width="38" height="28" viewBox="0 0 38 28" xmlns="http://www.w3.org/2000/svg" aria-label="Avión">
+          <g fill="#059669" stroke="#059669" stroke-width="1.2">
+            <path d="M6 14 L19 14 L13 11 L13 17 Z"/>
+            <path d="M12 14 L6 9 L7.5 8 L14 12 Z"/>
+            <path d="M12 14 L6 19 L7.5 20 L14 16 Z"/>
+            <path d="M9.5 13 L8 10 L9 10 L11 13 Z"/>
+            <path d="M9.5 15 L8 18 L9 18 L11 15 Z"/>
+          </g>
+          <text x="24" y="18" font-size="11" fill="#111827" font-weight="700">${name||''}</text>
+        </svg>
+      `, `rotate(${headingDeg}deg)`),
+      receptor:(name)=> svgIcon(`<svg width="110" height="28" viewBox="0 0 110 28" xmlns="http://www.w3.org/2000/svg"><g fill="none" stroke="#fb923c" stroke-width="2"><rect x="2" y="8" width="26" height="14" rx="4" fill="#ffffff" stroke="#fb923c"/><circle cx="10" cy="15" r="2" fill="#fb923c"/><circle cx="18" cy="15" r="2" fill="#fb923c"/></g><text x="34" y="18" font-size="12" fill="#111827" font-weight="700">${name||'Receptor'}</text></svg>`)
+    };
+    function iconFor(tipo, nombre, headingDeg=0){
+      if(tipo==='torre') return ICONS.torre(nombre);
+      if(tipo==='antena') return ICONS.antena(nombre);
+      if(tipo==='avion') return ICONS.avion(nombre, headingDeg);
+      return ICONS.receptor(nombre);
+    }
+
+    let components = [];
+    const markers = {};  let addMode = false;
+
+    const listEl = document.getElementById('list');
+    const rxSelect = document.getElementById('rxSelect');
+    const txSelect = document.getElementById('txSelect');
+    const rxSelect2 = document.getElementById('rxSelect2');
+
+    document.getElementById('addBtn').onclick = () => { addMode = !addMode; alert(addMode? 'Click en el mapa para crear componente':'Modo agregar desactivado'); };
+    document.getElementById('centerSkcgBtn').onclick = () => { map.setView([SKCG.lat, SKCG.lon], SKCG.zoom); };
+
+    map.on('click', (ev)=>{
+      if(!addMode) return;
+      const id = 'cmp-' + Math.random().toString(36).slice(2,9);
+      const obj = { id, nombre:'Nuevo', tipo:'antena', lat:ev.latlng.lat, lon:ev.latlng.lng, alt_terreno_m:0, alt_sobre_terreno_m:30, frecuencia_MHz:118, potencia_dBm:40 };
+      components.push(obj); addMarker(obj); renderList(); syncSelectors();
+    });
+
+    // Aerovías
+    let airways = [];
+    let airwaysLayer = L.featureGroup().addTo(map);
+    document.getElementById('airwayFile').onchange = async (e)=>{
+      const f = e.target.files?.[0]; if(!f) return;
+      const text = await f.text(); const gj = JSON.parse(text);
+      airways = []; airwaysLayer.clearLayers();
+      (gj.features||[]).forEach(feat=>{
+        const coords = (feat.geometry && feat.geometry.type==='LineString') ? feat.geometry.coordinates : null;
+        if(!coords) return;
+        const line = coords.map(([lon,lat])=>[lat,lon]);
+        airways.push(line);
+        L.polyline(line, {color:'#0ea5a3', weight:2, dashArray:'4 4'}).addTo(airwaysLayer);
+      });
+      if(airways.length){ map.fitBounds(airwaysLayer.getBounds().pad(0.2)); }
+    };
+    function projectPointOnSegment(p, a, b){
+      const toXY = (pt)=>{
+        const R = 6371000;
+        const x = (pt[1] - a[1]) * Math.cos((pt[0]+a[0]) * Math.PI/360) * (Math.PI/180) * R;
+        const y = (pt[0] - a[0]) * (Math.PI/180) * R;
+        return [x,y];
+      };
+      const pxy = toXY(p), axy=[0,0], bxy=toXY(b);
+      const ab = [bxy[0]-axy[0], bxy[1]-axy[1]];
+      const ap = [pxy[0]-axy[0], pxy[1]-axy[1]];
+      const ab2 = ab[0]*ab[0]+ab[1]*ab[1];
+      const t = Math.max(0, Math.min(1, (ap[0]*ab[0]+ap[1]*ab[1])/(ab2||1)));
+      const projXY = [axy[0]+ab[0]*t, axy[1]+ab[1]*t];
+      const R = 6371000;
+      const dLat = projXY[1]/R*(180/Math.PI);
+      const dLon = projXY[0]/(R*Math.cos((a[0]) * Math.PI/180))*(180/Math.PI);
+      return [a[0]+dLat, a[1]+dLon];
+    }
+    function snapToAirways(lat, lon){
+      if(!airways.length) return [lat,lon];
+      let best = null, bestDist2 = 1e18;
+      const p = [lat,lon];
+      for(const line of airways){
+        for(let i=0;i<line.length-1;i++){
+          const q = projectPointOnSegment(p, line[i], line[i+1]);
+          const px = map.latLngToContainerPoint(p);
+          const qx = map.latLngToContainerPoint(q);
+          const dx=px.x-qx.x, dy=px.y-qx.y;
+          const d2 = dx*dx+dy*dy;
+          if(d2<bestDist2){ bestDist2=d2; best=q; }
+        }
+      }
+      return best || [lat,lon];
+    }
+
+    // Modal
+    const modalEl = document.getElementById('modal');
+    document.getElementById('modalClose').onclick = ()=> modalEl.style.display='none';
+    [...document.querySelectorAll('[data-tab]')].forEach(btn=>{
+      btn.onclick = ()=>{
+        const tab = btn.dataset.tab;
+        document.getElementById('tab_carriers').style.display = tab==='carriers'?'block':'none';
+        document.getElementById('tab_im2').style.display = tab==='im2'?'block':'none';
+        document.getElementById('tab_im3').style.display = tab==='im3'?'block':'none';
+      };
+    });
+    function showInterferenceModal(result, title='Interferencias'){
+      document.getElementById('modalTitle').textContent = title;
+      const carr = result.items.filter(x=>x.kind==='carrier');
+      const im2  = result.items.filter(x=>x.kind==='im2');
+      const im3  = result.items.filter(x=>x.kind==='im3');
+      const renderList = (arr)=> `<table style="width:100%; border-collapse:collapse;">
+        <thead><tr><th align="left">Tipo</th><th align="right">f (MHz)</th><th align="right">Raw (dBm)</th><th align="right">Filtro (dBm)</th><th align="left">IDs</th></tr></thead>
+        <tbody>${arr.slice(0,60).map(it=>`
+          <tr>
+            <td>${it.kind}</td>
+            <td align="right">${it.f_MHz.toFixed(4)}</td>
+            <td align="right">${it.raw_level_dBm.toFixed(1)}</td>
+            <td align="right">${it.after_filter_dBm.toFixed(1)}</td>
+            <td>${it.contributor_ids.join(', ')}</td>
+          </tr>`).join('')}
+        </tbody></table>`;
+      document.getElementById('tab_carriers').innerHTML = renderList(carr);
+      document.getElementById('tab_im2').innerHTML = renderList(im2);
+      document.getElementById('tab_im3').innerHTML = renderList(im3);
+      modalEl.style.display = 'flex';
+      document.querySelector('[data-tab="carriers"]').click();
+    }
+
+    function layerByType(t){ return (layers[t] || layers.antena); }
+    function addMarker(o){
+      const m = L.marker([o.lat,o.lon], {draggable:true, icon: iconFor(o.tipo, o.nombre, o.heading_deg||0)});
+      m.addTo(layerByType(o.tipo));
+      m.on('dragend', (e)=>{ const ll = e.target.getLatLng(); o.lat=ll.lat; o.lon=ll.lng; renderList(); });
+      m.on('click', ()=> map.setView([o.lat,o.lon], Math.max(map.getZoom(), 14)));
+      m.on('dblclick', async ()=>{
+        if(o.tipo!=='avion') return;
+        const rxFreq = parseFloat(document.getElementById('fMHz').value) || 118.1;
+        const rxAir = { ...o, tipo:'receptor', frecuencia_MHz: rxFreq };
+        const txs = components.filter(x=>x.tipo!=='receptor' && x.id!==o.id && x.potencia_dBm!=null && x.frecuencia_MHz!=null);
+        const window_kHz = parseFloat(document.getElementById('winKhz').value)||500;
+        const max_order = parseInt(document.getElementById('ordMax').value)||3;
+        const filter_rejection_dB = buildFilterCurve(rxFreq);
+        const payload = { receiver: rxAir, transmitters: txs, max_order, window_kHz, filter_rejection_dB };
+        const res = await fetch(API+'/radio/interference', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+        const data = await res.json();
+        showInterferenceModal(data, 'A bordo — Interferencias');
+      });
+      markers[o.id] = m;
+    }
+    function moveMarkerToLayer(o){
+      const m = markers[o.id]; if(!m) return;
+      Object.values(layers).forEach(g=>{ try{ g.removeLayer(m);}catch(_){} });
+      m.setIcon(iconFor(o.tipo, o.nombre, o.heading_deg||0));
+      m.addTo(layerByType(o.tipo));
+    }
+
+    function renderList(){
+      listEl.innerHTML='';
+      components.forEach(o=>{
+        const div = document.createElement('div'); div.className='item';
+        div.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <strong>${o.nombre}</strong>
+            <select data-k="tipo">
+              <option ${o.tipo==='torre'?'selected':''}>torre</option>
+              <option ${o.tipo==='antena'?'selected':''}>antena</option>
+              <option ${o.tipo==='avion'?'selected':''}>avion</option>
+              <option ${o.tipo==='receptor'?'selected':''}>receptor</option>
+            </select>
+          </div>
+          <label>Nombre</label><input data-k="nombre" value="${o.nombre}">
+          <label>Lat</label><input data-k="lat" type="number" step="0.000001" value="${o.lat}">
+          <label>Lon</label><input data-k="lon" type="number" step="0.000001" value="${o.lon}">
+          <label>Alt terreno (m)</label><input data-k="alt_terreno_m" type="number" step="0.1" value="${o.alt_terreno_m}">
+          <label>Alt sobre terreno (m)</label><input data-k="alt_sobre_terreno_m" type="number" step="0.1" value="${o.alt_sobre_terreno_m}">
+          <label>Frecuencia (MHz)</label><input data-k="frecuencia_MHz" type="number" step="0.001" value="${o.frecuencia_MHz??''}">
+          <label>Potencia (dBm)</label><input data-k="potencia_dBm" type="number" step="0.1" value="${o.potencia_dBm??''}">
+          ${o.tipo==='avion' ? `
+            <label>Rumbo (°)</label>
+            <input data-k="heading_deg" type="number" min="0" max="359" step="1" value="${o.heading_deg ?? 0}">
+          ` : ''}
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn" data-act="focus">Enfocar</button>
+            <button class="btn" data-act="del" style="border-color:#fecaca">Eliminar</button>
+          </div>`;
+        div.querySelectorAll('input,select').forEach(inp=>{
+          inp.onchange = (e)=>{
+            const k = e.target.dataset.k; let v = e.target.value;
+            if(['lat','lon','alt_terreno_m','alt_sobre_terreno_m','frecuencia_MHz','potencia_dBm','heading_deg'].includes(k)) v = parseFloat(v);
+            o[k]=v;
+            const m = markers[o.id];
+            if(m){ m.setLatLng([o.lat,o.lon]); moveMarkerToLayer(o); }
+            syncSelectors();
+          };
+        });
+        div.querySelector('[data-act="focus"]').onclick = ()=> map.setView([o.lat,o.lon], 15);
+        div.querySelector('[data-act="del"]').onclick = ()=>{
+          components = components.filter(x=>x.id!==o.id);
+          const m = markers[o.id]; if(m){ Object.values(layers).forEach(g=>g.removeLayer(m)); delete markers[o.id]; }
+          renderList(); syncSelectors();
+        };
+        listEl.appendChild(div);
+      });
+    }
+
+    document.getElementById('saveBtn').onclick = ()=>{
+      const blob = new Blob([JSON.stringify({objetos:components}, null, 2)], {type:'application/json'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'escenario.json'; a.click(); URL.revokeObjectURL(a.href);
+    };
+    document.getElementById('loadBtn').onclick = ()=> document.getElementById('fileInput').click();
+    document.getElementById('fileInput').onchange = async (e)=>{
+      const f = e.target.files?.[0]; if(!f) return;
+      const text = await f.text(); const data = JSON.parse(text);
+      components = data.objetos || [];
+      Object.values(markers).forEach(m=>{ Object.values(layers).forEach(g=>{ try{ g.removeLayer(m);}catch(_){} }); });
+      for(const k in markers) delete markers[k];
+      components.forEach(addMarker); renderList(); syncSelectors(); e.target.value='';
+    };
+
+    document.getElementById('saveSrv').onclick = async ()=>{
+      const id = prompt('ID del escenario:', 'esc1'); if(!id) return;
+      const name = prompt('Nombre del escenario:', 'Cartagena Popa'); if(!name) return;
+      const payload = { id, name, owner_id:'demo', objetos: components };
+      const r = await fetch(API+'/scenario', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+      const data = await r.json();
+      alert('Guardado en servidor: ' + data.name);
+    };
+    document.getElementById('loadSrv').onclick = async ()=>{
+      const id = prompt('ID del escenario a cargar:', 'esc1'); if(!id) return;
+      const r = await fetch(API+'/scenario/'+encodeURIComponent(id));
+      if(!r.ok){ alert('No existe'); return; }
+      const data = await r.json();
+      components = data.objetos || [];
+      Object.values(markers).forEach(m=>{ Object.values(layers).forEach(g=>{ try{ g.removeLayer(m);}catch(_){} }); });
+      for(const k in markers) delete markers[k];
+      components.forEach(addMarker); renderList(); syncSelectors();
+    };
+
+    function colorScale(dbm){
+      if(dbm > -60) return '#ef4444';
+      if(dbm > -80) return '#f97316';
+      if(dbm > -100) return '#f59e0b';
+      if(dbm > -115) return '#84cc16';
+      return '#22c55e';
+    }
+
+    // fuerza a Leaflet a medir el tamaño real
+    setTimeout(()=>{
+        map.invalidateSize();
+        // si usas canvas de heatmap:
+        if (typeof resizeHeatCanvas === 'function') resizeHeatCanvas();
+    }, 0);
+
+    // === Heatmap (canvas) setup ===
+    const heatCanvas = document.getElementById('heatCanvas');
+    const heatCtx = heatCanvas.getContext('2d', { willReadFrequently: true });
+    let lastHeatPoints = null;
+    let lastHeatParams = null;
+
+    
+    function resizeHeatCanvas(){
+      const sz = map.getSize();
+      heatCanvas.width  = Math.max(1, sz.x);
+      heatCanvas.height = Math.max(1, sz.y);
+    }
+    function dbmToAlpha(dbm){
+    // mapa [-130..-60] a [0..1], pero con curva suave (gamma)
+        const cl = Math.max(-130, Math.min(-60, dbm));
+        const t = (cl + 130) / 70;  // 0..1
+        const gamma = 0.8;          // <1 oscurece menos
+        return Math.pow(t, gamma);
+    }
+
+    function drawHeatCanvas(points, params = {radiusPx: 26, maxAlpha: 0.65}){
+        resizeHeatCanvas();
+        if (heatCanvas.width === 0 || heatCanvas.height === 0) {
+            requestAnimationFrame(()=> drawHeatCanvas(points, params));
+            return;
+        }
+        heatCtx.clearRect(0,0,heatCanvas.width, heatCanvas.height);
+        const r = params.radiusPx;
+        const gradCanvas = document.createElement('canvas');
+        gradCanvas.width = gradCanvas.height = r*2;
+        const gctx = gradCanvas.getContext('2d');
+        const g = gctx.createRadialGradient(r,r,0, r,r,r);
+        g.addColorStop(0, 'rgba(0,0,0,1)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        gctx.fillStyle = g;
+        gctx.fillRect(0,0,gradCanvas.width, gradCanvas.height);
+        heatCtx.globalCompositeOperation = 'source-over';
+        for(const pt of points){
+            const p = map.latLngToContainerPoint([pt.lat, pt.lon]);
+            heatCtx.globalAlpha = dbmToAlpha(pt.score_dBm) * params.maxAlpha;
+            heatCtx.drawImage(gradCanvas, Math.round(p.x - r), Math.round(p.y - r));
+        }
+        const img = heatCtx.getImageData(0,0,heatCanvas.width,heatCanvas.height);
+        const d = img.data;
+        for(let i=0;i<d.length;i+=4){
+            const a = d[i+3]/255; if(a<=0) continue;
+            const col = a<0.25 ? [34,197,94] : a<0.5 ? [132,204,22] : a<0.7 ? [245,158,11] : a<0.85 ? [249,115,22] : [239,68,68];
+            d[i]=col[0]; d[i+1]=col[1]; d[i+2]=col[2]; d[i+3]=Math.min(255, Math.round(a*255));
+        }
+        heatCtx.putImageData(img,0,0);
+        lastHeatPoints = points;
+        lastHeatParams = params;
+    }
+
+    // --- Opacidad del heatmap (slider) + Borrar mapa ---
+    const hmOpacity    = document.getElementById('hmOpacity');
+    const hmOpacityVal = document.getElementById('hmOpacityVal');
+    const hmClearBtn   = document.getElementById('hmClear');
+
+    if (hmOpacity && hmOpacityVal) {
+    hmOpacityVal.textContent = hmOpacity.value;
+    hmOpacity.oninput = ()=>{
+        hmOpacityVal.textContent = hmOpacity.value;
+        if (lastHeatPoints && lastHeatParams) {
+        const newAlpha = parseFloat(hmOpacity.value) || 0.65;
+        drawHeatCanvas(lastHeatPoints, { ...lastHeatParams, maxAlpha: newAlpha });
+        }
+    };
+    }
+
+    if (hmClearBtn) {
+    hmClearBtn.onclick = ()=>{
+        // limpia canvas y estado
+        heatCtx.clearRect(0, 0, heatCanvas.width, heatCanvas.height);
+        lastHeatPoints = null;
+        lastHeatParams = null;
+        // opcional: limpia capa vectorial si aún pintas polígonos
+        heatLayer.clearLayers();
+    };
+    }
+
+
+    window.addEventListener('resize', ()=>{ if(lastHeatPoints) requestAnimationFrame(()=> drawHeatCanvas(lastHeatPoints, lastHeatParams)); });
+    map.on('moveend zoomend', ()=>{ if(lastHeatPoints) requestAnimationFrame(()=> drawHeatCanvas(lastHeatPoints, lastHeatParams)); });
+    resizeHeatCanvas();
+
+    // Heatmap request
+    document.getElementById('hmBtn').onclick = async ()=>{
+        heatLayer.clearLayers();
+        const txs = components.filter(o => (o.tipo==='antena' || o.tipo==='torre') && o.potencia_dBm!=null && o.frecuencia_MHz!=null);
+        const body = {
+            center_lat: LA_POPA.lat, center_lon: LA_POPA.lon,
+            radius_km: parseFloat(document.getElementById('hmRad').value)||3,
+            step_m: parseInt(document.getElementById('hmStep').value)||200,
+            f_rx_MHz: parseFloat(document.getElementById('hmFRx').value)||118.1,
+            window_kHz: parseFloat(document.getElementById('hmWin').value)||150,
+            transmitters: txs,
+            filter_rejection_dB: buildFilterCurve(parseFloat(document.getElementById('hmFRx').value)||118.1)
+        };
+        const res = await fetch(API+'/radio/heatmap', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const data = await res.json();
+        const maxA = parseFloat((document.getElementById('hmOpacity')||{}).value) || 0.65;
+        drawHeatCanvas(data.points, { radiusPx: 26, maxAlpha: maxA });
+
+
+    };
+
+    // Rutas
+    let route = [], routePolyline = null, routeTimer = null, routeIdx = 0;
+    function parseCSV(text){
+      const lines = text.split(/\r?\n/).filter(l=>l.trim().length); const out=[];
+      for(const ln of lines){ const [a,b]=ln.split(',').map(s=>s.trim()); const lat=parseFloat(a), lon=parseFloat(b); if(Number.isFinite(lat)&&Number.isFinite(lon)) out.push([lat,lon]); }
+      return out;
+    }
+    function parseGPX(text){
+      const pts = [...text.matchAll(/<trkpt[^>]*?lat=\"([^\"]+)\"[^>]*?lon=\"([^\"]+)\"/g)];
+      return pts.map(m=>[parseFloat(m[1]), parseFloat(m[2])]).filter(([a,b])=>Number.isFinite(a)&&Number.isFinite(b));
+    }
+    document.getElementById('routeFile').onchange = async (e)=>{
+      const f = e.target.files?.[0]; if(!f) return;
+      const text = await f.text();
+      route = f.name.toLowerCase().endsWith('.gpx') ? parseGPX(text) : parseCSV(text);
+      if(route.length<2){ alert('Ruta inválida o muy corta'); return;}
+      if(routePolyline){ map.removeLayer(routePolyline); routePolyline=null; }
+      routePolyline = L.polyline(route, {color:'#2563eb'}).addTo(map);
+      map.fitBounds(routePolyline.getBounds().pad(0.2));
+    };
+    // REEMPLAZA tu headingFrom por esta
+function headingFrom(a, b){
+    const toRad = d => d * Math.PI / 180;
+    const toDeg = r => r * 180 / Math.PI;
+
+    const lat1 = toRad(a[0]), lon1 = toRad(a[1]);
+    const lat2 = toRad(b[0]), lon2 = toRad(b[1]);
+    const dLon = lon2 - lon1;
+
+    // Rumbo geodésico inicial (0° = Norte, creciente al Este)
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+    let brng = (toDeg(Math.atan2(y, x)) + 360) % 360;
+
+    // Nuestro SVG apunta al Este (0° visual = 90° geográfico) → rotamos -90°
+    brng = (brng - 90 + 360) % 360;
+    return brng;
+}
+
+    document.getElementById('routePlay').onclick = ()=>{
+      if(!route || route.length<2){ alert('Carga una ruta GPX/CSV'); return; }
+      clearInterval(routeTimer);
+      routeTimer = setInterval(async ()=>{
+        const plane = components.find(o=>o.tipo==='avion');
+        if(!plane){ alert('Crea un componente tipo "avion"'); clearInterval(routeTimer); return; }
+        const sp = Math.max(0.5, parseFloat(document.getElementById('routeSpeed').value)||1);
+        routeIdx = Math.min(route.length-2, routeIdx + Math.max(1, Math.round(sp)));
+        const A = route[routeIdx], B = route[routeIdx+1];
+        plane.lat = A[0]; plane.lon = A[1];
+        if(document.getElementById('snapAirway').checked){
+          const snapped = snapToAirways(plane.lat, plane.lon); plane.lat = snapped[0]; plane.lon = snapped[1];
+        }
+        plane.heading_deg = headingFrom(A,B);
+        const m = markers[plane.id];
+        if(m){ m.setLatLng([plane.lat, plane.lon]); m.setIcon(iconFor(plane.tipo, plane.nombre, plane.heading_deg||0)); }
+        if(document.getElementById('routeLiveLOS').checked){
+          const tx = components.find(o=>o.id===txSelect.value) || components.find(o=>o.tipo!=='receptor');
+          const rx = { ...plane, tipo:'receptor', frecuencia_MHz: parseFloat(document.getElementById('fMHz').value)||118.1 };
+          if(tx){
+            const payload = { tx, rx, frecuencia_MHz: rx.frecuencia_MHz, k_factor: parseFloat(document.getElementById('kFactor').value)||1.33, samples: 96 };
+            try{ const r = await fetch(API+'/radio/los',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)}); drawProfile(await r.json()); }catch(_){}
+          }
+        }
+        if(document.getElementById('routeLiveINT').checked){
+          const rxAir = { ...plane, tipo:'receptor', frecuencia_MHz: parseFloat(document.getElementById('fMHz').value)||118.1 };
+          const txs = components.filter(x=>x.tipo!=='receptor' && x.id!==plane.id && x.potencia_dBm!=null && x.frecuencia_MHz!=null);
+          const payload = { receiver: rxAir, transmitters: txs, max_order: parseInt(document.getElementById('ordMax').value)||3, window_kHz: parseFloat(document.getElementById('winKhz').value)||500, filter_rejection_dB: buildFilterCurve(rxAir.frecuencia_MHz) };
+          try{ const r = await fetch(API+'/radio/interference',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)}); const data = await r.json(); document.getElementById('result').textContent = 'Live INT (top 8):\n' + JSON.stringify(data.items.slice(0,8), null, 2); }catch(_){}
+        }
+        if(routeIdx >= route.length-2){ clearInterval(routeTimer); }
+      }, 600);
+    };
+    document.getElementById('routePause').onclick = ()=>{ clearInterval(routeTimer); };
+
+    function syncSelectors(){
+      const rxId = rxSelect.value; rxSelect.innerHTML='';
+      const rxList = components.filter(o=>o.tipo==='receptor'); rxList.forEach(o=>{ const opt=document.createElement('option'); opt.value=o.id; opt.textContent=`${o.nombre}`; rxSelect.appendChild(opt); }); if(rxId) rxSelect.value=rxId;
+      const txId = txSelect.value, rx2Id = rxSelect2.value; txSelect.innerHTML=''; rxSelect2.innerHTML='';
+      const txCandidates = components.filter(o=>o.tipo!=='receptor');
+      txCandidates.forEach(o=>{ const opt=document.createElement('option'); opt.value=o.id; opt.textContent=`${o.nombre}`; txSelect.appendChild(opt); });
+      rxList.forEach(o=>{ const opt=document.createElement('option'); opt.value=o.id; opt.textContent=`${o.nombre}`; rxSelect2.appendChild(opt); });
+      if(txId) txSelect.value=txId; if(rx2Id) rxSelect2.value=rx2Id;
+    }
+
+    document.getElementById('calcBtn').onclick = async ()=>{
+      const rx = components.find(o=>o.id===rxSelect.value);
+      const txs = components.filter(o=>o.id!==rx?.id && o.potencia_dBm!=null && o.frecuencia_MHz!=null && o.tipo!=='receptor');
+      if(!rx){ alert('Crea al menos un receptor y selecciónalo.'); return; }
+      const window_kHz = parseFloat(document.getElementById('winKhz').value)||500;
+      const max_order = parseInt(document.getElementById('ordMax').value)||3;
+      const f_rx = rx.frecuencia_MHz ?? parseFloat(document.getElementById('fMHz').value) ?? 118.1;
+      const filter_rejection_dB = buildFilterCurve(f_rx);
+      const payload = { receiver: rx, transmitters: txs, max_order, window_kHz, filter_rejection_dB };
+      const res = await fetch(API+'/radio/interference', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const data = await res.json();
+      document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+    };
+
+    document.getElementById('losBtn').onclick = async ()=>{
+      const tx = components.find(o=>o.id===txSelect.value);
+      const rx = components.find(o=>o.id===rxSelect2.value);
+      if(!tx||!rx){ alert('Selecciona TX y RX'); return; }
+      const frecuencia_MHz = parseFloat(document.getElementById('fMHz').value)||118.1;
+      const k_factor = parseFloat(document.getElementById('kFactor').value)||1.33;
+      const payload = { tx, rx, frecuencia_MHz, k_factor, samples: 128 };
+      const res = await fetch(API+'/radio/los', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const data = await res.json();
+      drawProfile(data);
+    };
+
+    function drawProfile(data){
+      const svg = document.getElementById('profileSvg');
+      const W=800, H=240; svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.innerHTML='';
+      const padL=40, padR=10, padT=10, padB=30;
+      const xs = (d)=> padL + (d/data.distance_m)*(W-padL-padR);
+      const elevs = data.profile.map(p=>p.elev_m);
+      const rays  = data.profile.map(p=>p.ray_h_m);
+      const minV = Math.min(...elevs, ...rays);
+      const maxV = Math.max(...elevs, ...rays);
+      const ys = (v)=> padT + (1 - (v-minV)/(maxV-minV+1e-6))*(H-padT-padB);
+      let dPath = ''; data.profile.forEach((p,i)=>{ dPath += (i? 'L':'M') + xs(p.d_m) + ',' + ys(p.elev_m);});
+      const ground = document.createElementNS('http://www.w3.org/2000/svg','path'); ground.setAttribute('d', dPath); ground.setAttribute('stroke','#6b7280'); ground.setAttribute('fill','none'); ground.setAttribute('stroke-width','1.5'); svg.appendChild(ground);
+      let rPath = ''; data.profile.forEach((p,i)=>{ rPath += (i? 'L':'M') + xs(p.d_m) + ',' + ys(p.ray_h_m);});
+      const ray = document.createElementNS('http://www.w3.org/2000/svg','path'); ray.setAttribute('d', rPath); ray.setAttribute('stroke','#2563eb'); ray.setAttribute('fill','none'); ray.setAttribute('stroke-width','2'); svg.appendChild(ray);
+      let fTop='', fBot=''; data.profile.forEach((p,i)=>{ fTop += (i? 'L':'M') + xs(p.d_m) + ',' + ys(p.ray_h_m + p.f1_m); });
+      [...data.profile].reverse().forEach((p,i)=>{ fBot += (i? 'L':'L') + xs(p.d_m) + ',' + ys(p.ray_h_m - p.f1_m); });
+      const fres = document.createElementNS('http://www.w3.org/2000/svg','path'); fres.setAttribute('d', fTop + fBot + 'Z'); fres.setAttribute('fill','rgba(37,99,235,0.15)'); fres.setAttribute('stroke','none'); svg.appendChild(fres);
+      const axis = document.createElementNS('http://www.w3.org/2000/svg','line'); axis.setAttribute('x1',padL); axis.setAttribute('x2',W-padR); axis.setAttribute('y1',H-padB); axis.setAttribute('y2',H-padB); axis.setAttribute('stroke','#e5e7eb'); svg.appendChild(axis);
+      const tick = document.createElementNS('http://www.w3.org/2000/svg','text'); tick.setAttribute('x',W-padR-40); tick.setAttribute('y',H-10); tick.setAttribute('fill','#111827'); tick.setAttribute('font-size','12'); tick.textContent = (data.distance_m/1000).toFixed(2)+' km'; svg.appendChild(tick);
+      const info = document.getElementById('losInfo');
+      info.innerHTML = `<b>LOS:</b> ${data.has_los ? 'Sí' : 'No'} · <b>FSPL:</b> ${data.fspl_dB.toFixed(2)} dB · <b>Peor despeje Fresnel:</b> ${data.fresnel_clearance_min_pct.toFixed(1)}% · <b>Peor clearance:</b> ${data.clearance_worst_point_m.toFixed(2)} m · <b>Elevación:</b> ${data.source}`;
+    }
+
+    // Semilla Cartagena
+    (function seed(){
+      const TWR = { id:'twr1', nombre:'Torre SKCG', tipo:'torre', lat:10.4452, lon:-75.5138, alt_terreno_m:3,  alt_sobre_terreno_m:30,  frecuencia_MHz: 118.1, potencia_dBm: 50 };
+      const ANT = { id:'fm1',  nombre:'FM 99.1',    tipo:'antena',lat:10.44,   lon:-75.50,   alt_terreno_m:10, alt_sobre_terreno_m:60,  frecuencia_MHz: 99.1,  potencia_dBm: 70 };
+      const FM2 = { id:'fm2', nombre:'FM 101.3 (La Popa)', tipo:'antena', lat:LA_POPA.lat+0.001,   lon:LA_POPA.lon,   alt_terreno_m:140, alt_sobre_terreno_m:50, frecuencia_MHz:101.3, potencia_dBm:68 };
+      const FM3 = { id:'fm3', nombre:'FM 92.7 (La Popa)',  tipo:'antena', lat:LA_POPA.lat-0.0008, lon:LA_POPA.lon,   alt_terreno_m:140, alt_sobre_terreno_m:45, frecuencia_MHz:92.7,  potencia_dBm:65 };
+      const AC1 = { id:'av1',  nombre:'Avión', tipo:'avion',  lat:10.455, lon:-75.51, alt_terreno_m:0, alt_sobre_terreno_m:300, frecuencia_MHz:null, potencia_dBm:null, heading_deg:190 };
+      const RX  = { id:'rx1',  nombre:'VHF COM RX',  tipo:'receptor', lat:10.448, lon:-75.515, alt_terreno_m:3, alt_sobre_terreno_m:15, frecuencia_MHz:118.1 };
+      components = [TWR, ANT, FM2, FM3, AC1, RX];
+      components.forEach(addMarker); renderList(); syncSelectors();
+    })();
+  </script>
+</body>
+</html>

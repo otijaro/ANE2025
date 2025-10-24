@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="osim">
+  <trk><name>CTG demo</name><trkseg>
+    <trkpt lat="10.4745" lon="-75.5220"/>
+    <trkpt lat="10.4625" lon="-75.5205"/>
+    <trkpt lat="10.4500" lon="-75.5195"/>
+    <trkpt lat="10.4385" lon="-75.5185"/>
+    <trkpt lat="10.4270" lon="-75.5175"/>
+    <trkpt lat="10.4160" lon="-75.5165"/>
+    <trkpt lat="10.4060" lon="-75.5150"/>
+  </trkseg></trk>
+</gpx>

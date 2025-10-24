@@ -1,0 +1,17 @@
+{
+  "type": "FeatureCollection",
+  "features": [{
+    "type": "Feature",
+    "properties": { "name": "Vía CTG Norte-Sur" },
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [-75.5205, 10.4730],
+        [-75.5190, 10.4555],
+        [-75.5175, 10.4380],
+        [-75.5160, 10.4210],
+        [-75.5145, 10.4040]
+      ]
+    }
+  }]
+}
