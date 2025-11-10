@@ -3,7 +3,7 @@
 Webapp ligera para **explorar interferencia** (VHF-COM vs FM), **perfil del terreno y LOS**, y **gestión de escenarios** en Leaflet.
 
 > Carpeta del módulo: `doc/E2/map/o.simulador.map/`  
-> Front: [`index.html`](./front/index.html) y módulos en [`./front/js`](./front/js/)
+> Front: [`index.html`](./public/index.html) y módulos en [`./public/js`](./public/js/)
 
 ---
 
