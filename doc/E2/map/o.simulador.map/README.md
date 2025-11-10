@@ -110,7 +110,7 @@ POST /radio/interference (**request esperado**)
   "max_order": 3,
   "filter_id": "bpf_200k",
   "filter_rejection_dB": { "0":0, "25":8, "50":14, "100":24, "150":35, "200":45, "300":60, "500":80 }
-}
+}```
 
 POST /radio/interference (**response**)
 ```
@@ -121,11 +121,11 @@ POST /radio/interference (**response**)
     { "kind":"carrier", "f_MHz":118.1, "raw_level_dBm":-14.5, "after_filter_dBm":-14.5, "contributor_ids":["twr1"] }
   ]
 }
-
+```
 POST /radio/los (**request**)
 ```
 { "tx":{...}, "rx":{...}, "frecuencia_MHz":118.1, "k_factor":1.33, "samples":128 }
-
+```
 
 ## UI y controles
 
