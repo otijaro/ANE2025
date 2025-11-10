@@ -63,9 +63,9 @@ Webapp ligera para **explorar interferencia** (VHF-COM vs FM), **perfil del terr
 
 1. Botón **Calcular** en la sección Interferencia (demo).
 
-2. El front toma RX, ventana (±kHz), orden máx, filtro y exporta componentes con **__osim_export()**.
+2. El front toma RX, ventana (±kHz), orden máx, filtro y exporta componentes con `__osim_export()`.
 
-3. Separa **{receiver, transmitters}** y envía a **POST /radio/interference**.
+3. Separa `{receiver, transmitters}` y envía a `POST /radio/interference`.
 
 4. Muestra resultados en el **modal** (pestañas: Portadoras, IM2, IM3).
 
@@ -73,9 +73,9 @@ Webapp ligera para **explorar interferencia** (VHF-COM vs FM), **perfil del terr
 
 1. Selecciona **TX** y **RX**, f(MHz) y k-factor.
 
-2. Envía **POST /radio/los**.
+2. Envía `POST /radio/los`.
 
-3. Dibuja perfil en **#profileSvg** y leyendas en **#losInfo**.
+3. Dibuja perfil en `#profileSvg` y leyendas en `#losInfo`.
 
 ## Escenarios
 
