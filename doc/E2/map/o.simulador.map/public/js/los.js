@@ -1,45 +1,49 @@
 import { API_BASE } from './map.js';
 
-export function initLOS(){
-  const btn = document.getElementById('losBtn');
-  if(!btn) return;
-    btn.onclick = async () => {
-    // Ejemplo de payload: ajusta a tu LOSRequest real
-    const req = {
-        lat_tx: Number(document.querySelector('#lat_tx').value),
-        lon_tx: Number(document.querySelector('#lon_tx').value),
-        lat_rx: Number(document.querySelector('#lat_rx').value),
-        lon_rx: Number(document.querySelector('#lon_rx').value),
-        freq_mhz: Number(document.querySelector('#freq_mhz').value),
-        ptx_dbm: Number(document.querySelector('#ptx_dbm').value),
-        // ...cualquier otro campo requerido por LOSRequest
-    };
+export function initLOS() {
+    const btn = document.getElementById('losBtn');
+    if (!btn) return;
 
-    try {
-        const res = await fetch('http://127.0.0.1:8000/radio/los', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // Si usas cookies/autenticación: credentials: 'include',
-        body: JSON.stringify(req),
+    btn.onclick = async () => {
+        const txSel = document.getElementById('txSelect');
+        const rxSel = document.getElementById('rxSelect2');
+        if (!txSel?.value || !rxSel?.value) { alert('Selecciona TX y RX'); return; }
+
+        const tx = window.__osim_findById(txSel.value);
+        const rx = window.__osim_findById(rxSel.value);
+        if (!tx || !rx) { alert('TX/RX no válidos'); return; }
+
+        const frecuencia_MHz = parseFloat(document.getElementById('fMHz')?.value) || 118.1;
+        const k_factor = parseFloat(document.getElementById('kFactor')?.value) || 1.33;
+
+        // Mantengo tus campos tal cual (ajusta si tu LOSRequest pide otros nombres)
+        const payload = { tx, rx, frecuencia_MHz, k_factor, samples: 128 };
+
+        try {
+        const res = await fetch('/radio/los', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // credentials: 'include', // solo si usas sesión/cookies
+            body: JSON.stringify(payload),
         });
 
         if (!res.ok) {
-        // Intenta leer texto para ver 404/422/500 con detalle
-        const txt = await res.text();
-        throw new Error(`HTTP ${res.status} — ${txt.slice(0, 500)}`);
+            // Muestra detalle de 4xx/5xx (422 ayuda si el esquema no cuadra)
+            const txt = await res.text();
+            throw new Error(`HTTP ${res.status} — ${txt.slice(0, 300)}`);
         }
 
-        const r = await res.json();
-        console.log('[LOS] ok:', r);
-        // TODO: pinta r en tu UI
-    } catch (e) {
+        const data = await res.json();
+        console.log('[LOS] OK', data);
+        drawProfile(data);
+        } catch (e) {
         console.error('[LOS] fetch falló:', e);
-        alert('No se pudo obtener LOS. Revisa payload y que el backend esté en POST /radio/los.');
-        return; // evita usar r después de un error
-    }
+        alert('No se pudo obtener LOS. Verifica que el backend expone POST /radio/los y que el payload cumpla LOSRequest.');
+        return; // evita usar variables de éxito tras un fallo
+        }
     };
-
 }
+
 
 // Dibuja SVG del perfil
 export function drawProfile(data){
