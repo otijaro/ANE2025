@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>O.simulador_map — Sprint 2</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <style>
+    html, body { height: 100%; }
+    body{ margin:0; display:grid; grid-template-columns:380px 1fr; height:100vh; font-family:system-ui; }
+
+    main { position: relative; height:100vh; overflow:hidden; } /* clave para posicionar leyenda/modal */
+    #map  { position: relative; width:100%; height:100%; }     /* ♥ altura real */
+    #heatCanvas { z-index:450; pointer-events:none; }
+    aside{padding:10px;border-right:1px solid #e5e7eb;overflow:auto}
+    .btn{padding:8px 10px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;cursor:pointer;margin-right:6px}
+    .list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+    .item{padding:8px;border:1px solid #e5e7eb;border-radius:10px}
+    label{display:block;font-size:12px;color:#6b7280;margin-top:6px}
+    input,select{width:100%;padding:6px;border:1px solid #e5e7eb;border-radius:8px}
+    .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+    #profile{border:1px solid #e5e7eb;border-radius:10px;background:#fff;margin-top:10px;padding:6px}
+  </style>
+</head>
+<body>
+  <aside>
+    <h3>Simulador</h3>
+    <div class="row">
+      <button id="centerSkcgBtn" class="btn" title="Centrar Aeropuerto de Cartagena">Centrar SKCG</button>
+    </div>
+
+    <details open>
+      <summary><b>Componentes</b></summary>
+      <div class="row" style="margin-top:6px">
+        <button id="addBtn" class="btn">+ Componente (clic en mapa)</button>
+        <button id="saveBtn" class="btn">Guardar JSON</button>
+        <button id="loadBtn" class="btn">Cargar JSON</button>
+        <button id="saveSrv" class="btn">Guardar en servidor</button>
+        <button id="loadSrv" class="btn">Cargar del servidor</button>
+        <input type="file" id="fileInput" accept="application/json" style="display:none" />
+      </div>
+      <div class="list" id="list" style="margin-top:8px"></div>
+    </details>
+
+    <details open>
+        <summary><b>Interferencia (demo)</b></summary>
+        <label>Receptor</label>
+        <select id="rxSelect"></select>
+        <label>Ventana (±kHz)</label>
+        <input id="winKhz" type="number" value="500" />
+        <label>Orden máx (2–5)</label>
+        <input id="ordMax" type="number" value="3" min="2" max="5" />
+        <label>Filtro</label>
+        <select id="filterPreset"></select>
+        <button id="calcBtn" class="btn" style="margin-top:8px">Calcular</button>
+        <pre id="result" style="white-space:pre-wrap;background:#f9fafb;border:1px solid #e5e7eb;padding:8px;border-radius:10px;margin-top:8px;max-height:22vh;overflow:auto"></pre>
+        <label>Opacidad</label>
+        <input id="hmOpacity" type="range" min="0.2" max="0.95" step="0.05" value="0.65" style="width:120px">
+        <span id="hmOpacityVal" style="font-size:12px;color:#6b7280">0.65</span>
+        <button id="hmClear" class="btn">Borrar mapa</button>
+    </details>
+
+    <details open>
+      <summary><b>Perfil & LOS</b></summary>
+      <div class="row">
+        <label style="flex:1">TX</label>
+        <select id="txSelect" style="flex:2"></select>
+      </div>
+      <div class="row">
+        <label style="flex:1">RX</label>
+        <select id="rxSelect2" style="flex:2"></select>
+      </div>
+      <div class="row">
+        <label>f (MHz)</label>
+        <input id="fMHz" type="number" value="118.1" step="0.001" style="width:120px" />
+        <label>k-factor</label>
+        <input id="kFactor" type="number" value="1.33" step="0.01" style="width:100px" />
+        <button id="losBtn" class="btn">Perfil y LOS</button>
+      </div>
+      <div id="profile">
+        <svg id="profileSvg" viewBox="0 0 800 240" width="100%" height="240"></svg>
+        <div id="losInfo" style="font-size:12px;color:#111827;margin-top:6px"></div>
+      </div>
+    </details>
+
+    <details open>
+      <summary><b>Rutas (GPX/CSV) y Vuelo guiado</b></summary>
+      <div class="row" style="margin-top:6px">
+        <input type="file" id="airwayFile" accept=".geojson,.json" />
+        <label><input type="checkbox" id="snapAirway"/> Snap a aerovía</label>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <input type="file" id="routeFile" accept=".gpx,.csv" />
+        <button id="routePlay" class="btn">▶︎ Play</button>
+        <button id="routePause" class="btn">⏸︎ Pause</button>
+        <label>Vel (x)</label><input id="routeSpeed" type="number" value="1" step="0.5" style="width:80px"/>
+      </div>
+      <div class="row" style="margin-top:6px">
+        <label><input type="checkbox" id="routeLiveLOS" checked/> Actualizar LOS</label>
+        <label><input type="checkbox" id="routeLiveINT" checked/> Actualizar Interferencia</label>
+      </div>
+    </details>
+
+    <details open>
+      <summary><b>Mapa de interferencia (Cerro de la Popa)</b></summary>
+      <div class="row" style="margin-top:6px">
+        <label>f RX (MHz)</label><input id="hmFRx" type="number" value="118.1" step="0.001" style="width:100px"/>
+        <label>±kHz</label><input id="hmWin" type="number" value="150" step="10" style="width:80px"/>
+        <label>Radio (km)</label><input id="hmRad" type="number" value="3" step="0.5" style="width:80px"/>
+        <label>Step (m)</label><input id="hmStep" type="number" value="200" step="50" style="width:90px"/>
+        <button id="hmBtn" class="btn">Generar mapa</button>
+      </div>
+    </details>
+  </aside>
+
+  <main>
+    <div id="map">
+      <canvas id="heatCanvas" style="position:absolute; inset:0; z-index:450; pointer-events:none;"></canvas>
+    </div>
+
+    <!-- Leyenda -->
+    <div id="legend" style="
+      position:absolute; right:10px; bottom:10px; background:white;
+      border:1px solid #e5e7eb; border-radius:8px; padding:6px 8px; font-size:12px;">
+      <div style="margin-bottom:4px; font-weight:600;">Interferencia (dBm)</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div id="legendBar" style="width:140px; height:10px; background:linear-gradient(90deg,#22c55e,#84cc16,#f59e0b,#f97316,#ef4444);"></div>
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <div>−130</div><div>−100</div><div>−80</div><div>−60</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal (fuera de <main> para evitar clipping) -->
+    <div id="modal" style="
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.3); z-index:5000;">
+      <div class="modal-panel" style="
+        width:clamp(680px, 70vw, 980px);
+        max-height:80vh; background:white; border-radius:12px;
+        box-shadow:0 10px 30px rgba(0,0,0,.3); display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center;
+                    padding:10px 14px; border-bottom:1px solid #e5e7eb;">
+          <strong id="modalTitle">Interferencias</strong>
+          <button id="modalClose" class="btn">Cerrar</button>
+        </div>
+
+        <div style="padding:10px 14px; overflow:auto;">
+          <div style="display:flex; gap:6px; margin-bottom:8px; position:sticky; top:0; background:white;">
+            <button class="btn" data-tab="carriers">Portadoras</button>
+            <button class="btn" data-tab="im2">IM2</button>
+            <button class="btn" data-tab="im3">IM3</button>
+          </div>
+
+          <!-- Contenedores con altura máxima y scroll -->
+          <div id="tab_carriers" style="max-height:58vh; overflow:auto;"></div>
+          <div id="tab_im2"      style="display:none; max-height:58vh; overflow:auto;"></div>
+          <div id="tab_im3"      style="display:none; max-height:58vh; overflow:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

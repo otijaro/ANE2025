@@ -1,1 +1,0 @@
-# Reservado para futuras Pydantic models compartidas.

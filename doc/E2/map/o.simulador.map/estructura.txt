@@ -1,0 +1,33 @@
+/app                   # Backend (FastAPI)
+  /api                 # Routers (endpoints HTTP)
+    radio.py           # /radio/* (los, heatmap, interference)
+    scenarios.py       # /scenario CRUD
+    health.py          # /health, /ping
+  /core
+    config.py          # CORS, paths, constantes
+    db.py              # conexión SQLite, init_db()
+  /models
+    schemas.py         # Pydantic: Component, InterferenceRequest, etc.
+  /services
+    elevation.py       # perfil, los, fresnel
+    rf.py              # FSPL, intermods, filtros
+    heatmap.py         # malla y scoring (usa services.rf)
+  main.py              # crea FastAPI, incluye routers y estáticos
+/public                # Front “estático” servido por FastAPI
+  index.html           # HTML limpio (solo estructura)
+  /assets
+    styles.css         # estilos
+  /js
+    app.js             # bootstrap general
+    api.js             # fetch al backend, endpoints centralizados
+    map.js             # init Leaflet, capas, centrar SKCG
+    icons.js           # SVGs y helpers de marcadores
+    state.js           # estado: components[], markers{}, selecciones
+    components.js      # UI de componentes (lista, CRUD)
+    los.js             # Perfil & LOS (pinta SVG)
+    routes.js          # GPX/CSV loader, snap aerovía, play/pause
+    heatmap.js         # canvas, drawHeatCanvas, slider opacidad
+    filters.js         # presets y buildFilterCurve()
+    modal.js           # modal con tabs (carriers/IM2/IM3)
+.env                   # OSIM_DB, CORS_ORIGINS, etc.
+requirements.txt
