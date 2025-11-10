@@ -88,7 +88,7 @@ Webapp ligera para **explorar interferencia** (VHF-COM vs FM), **perfil del terr
 ## Modelo-de-datos-front--back
 
 **Componentes exportados**
-  ```bash
+  `bash
    {
   "id": "string",
   "kind": "rx" | "tx_fm" | "tx_vhf" | "tx_gen",
@@ -98,11 +98,11 @@ Webapp ligera para **explorar interferencia** (VHF-COM vs FM), **perfil del terr
   "f_MHz": 101.3,      // null si aplica
   "erp_dBm": 68,       // null si aplica
   "name": "FM 101.3 (La Popa)"
-}
+}`
 
 POST /radio/interference (**request esperado**)
 
-```bash
+`bash
 {
   "receiver": { /* componente kind:'rx' */ },
   "transmitters": [ /* TX con f_MHz y erp_dBm */ ],
@@ -110,7 +110,7 @@ POST /radio/interference (**request esperado**)
   "max_order": 3,
   "filter_id": "bpf_200k",
   "filter_rejection_dB": { "0":0, "25":8, "50":14, "100":24, "150":35, "200":45, "300":60, "500":80 }
-}
+}`
 
 POST /radio/interference (**response**)
 ```bash
