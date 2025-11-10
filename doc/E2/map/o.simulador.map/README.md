@@ -54,9 +54,9 @@ Webapp ligera para **explorar interferencia** (VHF-COM vs FM), **perfil del terr
 
 **Helpers globales** (expuestos por components.js):
 
-- **window.__osim_export()** → lista de componentes “back-ready”.
+- `window.__osim_export()` → lista de componentes “back-ready”.
 
-- **window.__osim_findById(id), __osim_markerFor(id), __osim_iconFor(o), __osim_findPlane()**.
+- `window.__osim_findById(id), __osim_markerFor(id), __osim_iconFor(o), __osim_findPlane()`.
 
 ## Flujos principales
 **Interferencia (demo)**
@@ -88,21 +88,21 @@ Webapp ligera para **explorar interferencia** (VHF-COM vs FM), **perfil del terr
 ## Modelo-de-datos-front--back
 
 **Componentes exportados**
-  `bash
-   {
-  "id": "string",
-  "kind": "rx" | "tx_fm" | "tx_vhf" | "tx_gen",
-  "lat": 10.44,
-  "lon": -75.51,
-  "h_m": 185,          // alt_terreno_m + alt_sobre_terreno_m
-  "f_MHz": 101.3,      // null si aplica
-  "erp_dBm": 68,       // null si aplica
-  "name": "FM 101.3 (La Popa)"
-}`
+
+```{
+   "id": "string",
+   "kind": "rx" | "tx_fm" | "tx_vhf" | "tx_gen",
+   "lat": 10.44,
+   "lon": -75.51,
+   "h_m": 185,          // alt_terreno_m + alt_sobre_terreno_m
+   "f_MHz": 101.3,      // null si aplica
+   "erp_dBm": 68,       // null si aplica
+   "name": "FM 101.3 (La Popa)"
+   }
 
 POST /radio/interference (**request esperado**)
 
-`bash
+```
 {
   "receiver": { /* componente kind:'rx' */ },
   "transmitters": [ /* TX con f_MHz y erp_dBm */ ],
@@ -110,10 +110,10 @@ POST /radio/interference (**request esperado**)
   "max_order": 3,
   "filter_id": "bpf_200k",
   "filter_rejection_dB": { "0":0, "25":8, "50":14, "100":24, "150":35, "200":45, "300":60, "500":80 }
-}`
+}
 
 POST /radio/interference (**response**)
-```bash
+```
 {
   "fspl_tx_rx": [ /* opcional */ ]  ,
   "rx_power_sum_dBm": -64.3,
@@ -123,7 +123,7 @@ POST /radio/interference (**response**)
 }
 
 POST /radio/los (**request**)
-```bash
+```
 { "tx":{...}, "rx":{...}, "frecuencia_MHz":118.1, "k_factor":1.33, "samples":128 }
 
 
