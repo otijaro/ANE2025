@@ -89,7 +89,8 @@ Webapp ligera para **explorar interferencia** (VHF-COM vs FM), **perfil del terr
 
 **Componentes exportados**
 
-```{
+```
+{
    "id": "string",
    "kind": "rx" | "tx_fm" | "tx_vhf" | "tx_gen",
    "lat": 10.44,
@@ -99,6 +100,7 @@ Webapp ligera para **explorar interferencia** (VHF-COM vs FM), **perfil del terr
    "erp_dBm": 68,       // null si aplica
    "name": "FM 101.3 (La Popa)"
    }
+```
 
 POST /radio/interference (**request esperado**)
 
@@ -110,7 +112,8 @@ POST /radio/interference (**request esperado**)
   "max_order": 3,
   "filter_id": "bpf_200k",
   "filter_rejection_dB": { "0":0, "25":8, "50":14, "100":24, "150":35, "200":45, "300":60, "500":80 }
-}```
+}
+```
 
 POST /radio/interference (**response**)
 ```
