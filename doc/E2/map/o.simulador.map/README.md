@@ -1,40 +1,32 @@
-O.simulador.map — Demo interactiva (Cartagena / VHF-COM vs FM)
+# O.simulador.map — Demo interactiva (Cartagena / VHF-COM vs FM)
 
-Simulador web para explorar interferencia (portadoras, IM2, IM3), perfil del terreno y LOS, rutas y un heatmap alrededor de Cerro de La Popa (Cartagena).
+Simulador web para explorar **interferencia** (portadoras, IM2, IM3), **perfil del terreno y LOS**, rutas y un **heatmap** alrededor del **Cerro de La Popa** (Cartagena).
 
-Arquitectura mínima: Frontend estático (Leaflet + JS) + Backend FastAPI (endpoints /radio/* y /scenario*).
+Arquitectura mínima: **Frontend estático** (Leaflet + JS) + **Backend FastAPI** (`/radio/*` y `/scenario*`).
 
-Tip de UX en GitHub: este README usa secciones plegables <details> para simular “pestañas”.
+> Sugerencia: este README usa `<details>` para secciones plegables (simulan “pestañas” en GitHub).
 
-Índice
+---
 
-1) Estructura
+## Índice
+- [Estructura](#estructura)
+- [Puesta en marcha](#puesta-en-marcha)
+  - [Backend (FastAPI)](#backend-fastapi)
+  - [Frontend estático](#frontend-estático)
+  - [Conexión Front ↔ API](#conexión-front--api)
+- [Uso de la interfaz](#uso-de-la-interfaz)
+- [API de referencia](#api-de-referencia)
+  - [`POST /radio/interference`](#post-radiointerference)
+  - [`POST /radio/los`](#post-radiolos)
+  - [Escenarios `/scenario*`](#escenarios-scenario)
+- [Troubleshooting](#troubleshooting)
+- [Roadmap](#roadmap)
+- [Licencia](#licencia)
 
-2) Puesta en marcha
+---
 
-2.1 Backend (FastAPI)
-
-2.2 Frontend estático
-
-2.3 Conexión Front ↔ API
-
-3) Uso de la interfaz
-
-4) API de referencia
-
-4.1 /radio/interference (POST)
-
-4.2 /radio/los (POST)
-
-4.3 Escenarios /scenario*
-
-5) Troubleshooting
-
-6) Roadmap
-
-7) Licencia
-
-1) Estructura
+## Estructura
+```
 o.simulador.map/
 ├── app/                     # Backend FastAPI
 │   ├── main.py              # uvicorn: app.main:app
@@ -57,107 +49,125 @@ o.simulador.map/
 │   └── heatmap.js           # Heatmap local
 └── requirements.txt         # (si aplica)
 
-2) Puesta en marcha
-2.1 Backend (FastAPI)
+```
 
-Ejecuta estos comandos desde la carpeta que contiene app/ (donde está app/main.py).
+---
 
+## Puesta en marcha
+
+### Backend (FastAPI)
+
+> Ejecuta estos comandos **desde la carpeta que contiene `app/`** (donde está `app/main.py`).
+
+```bash
 # (opcional) entorno virtual
 python -m venv .venv
 # Windows PowerShell:
 . .venv/Scripts/Activate.ps1
-# (Bash)
+# (Bash):
 # source .venv/bin/activate
 
-# Dependencias mínimas (ajusta según tu requirements.txt)
+# Dependencias mínimas (ajusta con tu requirements.txt)
 pip install fastapi uvicorn pydantic[dotenv]
 
 # CORS: autoriza los orígenes donde servirás el front
 # Windows PowerShell:
 $env:OSIM_CORS="http://127.0.0.1:8000,http://localhost:8000,http://10.1.51.193:8000"
-# (en Bash) export OSIM_CORS="http://127.0.0.1:8000,http://localhost:8000,http://10.1.51.193:8000"
+# Bash:
+# export OSIM_CORS="http://127.0.0.1:8000,http://localhost:8000,http://10.1.51.193:8000"
 
 # Levantar API
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-2.2 Frontend estático
+---
+## Frontend estático
 
-Ejecuta desde la carpeta que contiene index.html.
+Ejecuta desde la carpeta que contiene `index.html`.
 
-# Opción sencilla
+```python
+# Servidor sencillo
 python -m http.server 8000
 
 # Abre el front:
 # http://127.0.0.1:8000
 
-2.3 Conexión Front ↔ API
+```
+
+## Conexión Front ↔ API
 
 El front usa window.API_BASE:
 
-Por defecto: intenta localStorage.API_BASE; si no existe, usa http://127.0.0.1:8000.
+1. **Por defecto**: intenta `localStorage.API_BASE`; si no existe, usa `http://127.0.0.1:8000`.
 
-En HTML (antes de app.js):
+2. **En HTML** (antes de `app.js`):
 
+```html
 <script>window.API_BASE = 'http://127.0.0.1:8000';</script>
 <script type="module" src="/js/app.js"></script>
+```
 
-
-Rápido por consola:
-
+3. **Rápido por consola del navegador**:
+```js
 localStorage.setItem('API_BASE','http://127.0.0.1:8000'); location.reload();
+```
 
-3) Uso de la interfaz
+## Uso de la interfaz
 
-Componentes
+<details> <summary><b>1) Componentes</b></summary>
 
-Usa la semilla Cartagena (cargada al iniciar) o crea/edita en la sección Componentes.
+- Carga automática de **semilla Cartagena** (SKCG + La Popa).
 
-Cada item tiene: tipo (torre/antena/avión/receptor), lat/lon, alturas, frecuencia (MHz), potencia (dBm).
+- En **Componentes** puedes crear/editar: tipo (torre/antena/avión/receptor), lat/lon, alturas, frecuencia (MHz), potencia (dBm).
 
-Arrastra los marcadores en el mapa para reposicionarlos.
+-  Arrastra marcadores en el mapa para reposicionarlos.
 
-Interferencia (demo)
+-  Guarda/Carga **JSON** localmente o en el backend con **Escenarios**.
 
-Elige Receptor (RX), ajusta Ventana (±kHz) y Orden máx (2–5).
+</details> <details> <summary><b>2) Interferencia (demo)</b></summary>
 
-Selecciona Filtro (p. ej., “BPF comercial 200 kHz”).
+- Selecciona **Receptor (RX)**, ajusta **Ventana (±kHz)** y **Orden máx (2–5)**.
 
-Presiona Calcular: se abre el modal con tres “pestañas”:
+- Elige **Filtro** (p. ej., “BPF comercial 200 kHz”).
 
-Portadoras
+- **Calcular** abre un modal con 3 pestañas:
 
-IM2 (2º orden: f1±f2, 2f1, 2f2)
+  - **Portadoras**
 
-IM3 (3º orden: 2f1±f2, 2f2±f1, 3f1, 3f2)
+  - **IM2** (2º orden: f1±f2, 2f1, 2f2)
 
-La tabla muestra: frecuencia (MHz), nivel bruto (dBm), nivel tras filtro (dBm) e IDs de contribuyentes.
+  - **IM3** (3º orden: 2f1±f2, 2f2±f1, 3f1, 3f2)
 
-Perfil & LOS
+- Las tablas muestran: **f (MHz), Raw (dBm), Filtro (dBm) e IDs**.
 
-Selecciona TX/RX, define f (MHz) y k-factor.
+</details> <details> <summary><b>3) Perfil & LOS</b></summary>
 
-Perfil y LOS: dibuja el perfil de terreno, Fresnel y clearance.
+- Selecciona **TX/RX**, define **f (MHz)** y **k-factor**.
 
-Rutas y “Vuelo guiado”
+- **Perfil y LOS** dibuja perfil de terreno, Fresnel y clearance.
 
-Carga GPX/CSV; usa Play/Pause y velocidad.
+</details> <details> <summary><b>4) Rutas y “Vuelo guiado”</b></summary>
 
-Opciones de LOS/interferencia en vivo mientras se mueve el avión.
+- Carga **GPX/CSV**; usa **Play/Pause** y velocidad.
 
-Heatmap local (La Popa)
+- Opciones de **LOS/interferencia** en vivo mientras se mueve el avión.
 
-Ajusta f_RX, ±kHz, radio (km) y step (m) → Generar mapa.
+</details> <details> <summary><b>5) Heatmap local (La Popa)</b></summary>
 
-4) API de referencia
+- Ajusta **f_RX, ±kHz, radio (km) y step (m) → Generar mapa**.
 
-Asume API_BASE=http://127.0.0.1:8000.
+</details>
 
-4.1 /radio/interference (POST)
+## API de referencia
 
-Calcula portadoras e intermodulación (hasta max_order), aplicando atenuación de filtro.
+  Asume `API_BASE=http://127.0.0.1:8000`.
 
-Body (ejemplo mínimo)
+`POST /radio/interference`
 
+Calcula portadoras e intermodulación (hasta `max_order`), aplicando atenuación de filtro.
+
+**Body (ejemplo mínimo)**
+```json
 {
   "receiver": {
     "id": "rx1",
@@ -196,16 +206,18 @@ Body (ejemplo mínimo)
   "filter_rejection_dB": { "0":0, "25":8, "50":14, "100":24, "150":35, "200":45, "300":60, "500":80 }
 }
 
+```
+**Curl**
 
-Curl
+```bash
 
 curl -X POST "$API_BASE/radio/interference" \
   -H "Content-Type: application/json" \
   -d @payload_interf.json
+```
 
-
-Respuesta (resumen)
-
+**Respuesta (resumen)**
+```json
 {
   "rx_power_sum_dBm": -87.3,
   "fspl_tx_rx": [
@@ -217,13 +229,14 @@ Respuesta (resumen)
     {"kind":"im3","f_MHz":118.3000,"raw_level_dBm":-82.4,"after_filter_dBm":-90.0,"contributor_ids":["fm2","twr1"]}
   ]
 }
+```
 
-4.2 /radio/los (POST)
+`POST /radio/los`
 
 Devuelve perfil entre TX/RX, curvatura (k-factor) y Fresnel.
 
-Body
-
+**Body**
+```json
 {
   "tx": {"lat":10.4452,"lon":-75.5138,"h_m":33},
   "rx": {"lat":10.4480,"lon":-75.5150,"h_m":18},
@@ -231,28 +244,30 @@ Body
   "k_factor": 1.33,
   "samples": 128
 }
+```
 
-
-Curl
-
+**Curl**
+```bash
 curl -X POST "$API_BASE/radio/los" \
   -H "Content-Type: application/json" \
   -d @payload_los.json
+```
 
-
-Respuesta (resumen)
-
+**Respuesta (resumen)**
+```json
 {
   "clearance": true,
   "grazing_points": [],
   "profile": [ {"d_m":0,"h_m":33}, {"d_m":100,"h_m":34.2} ],
   "fresnel_radius_m": [ ... ]
 }
+```
 
-4.3 Escenarios /scenario*
+**Escenarios** `/scenario*`
 
-Guardar:
+**Guardar**
 
+```bash
 curl -X POST "$API_BASE/scenario" \
   -H "Content-Type: application/json" \
   -d '{
@@ -261,46 +276,48 @@ curl -X POST "$API_BASE/scenario" \
     "owner_id":"demo",
     "objetos":[ /* componentes tal como front */ ]
   }'
+```
 
-
-Cargar:
-
+**Cargar**
+```bash
 curl "$API_BASE/scenario/esc1"
+```
 
-5) Troubleshooting
+## Troubleshooting
 <details> <summary><b>422 Unprocessable Entity</b></summary>
 
-Campos faltantes (ej. receiver.name, transmitters[].name, kind/tipo).
+- Campos faltantes (ej. `receiver.name`, `transmitters[].name`, `kind/tipo`).
 
-Asegura nombres exactos: el front exporta {id,name,kind,lat,lon,h_m,f_MHz,erp_dBm}.
+- Asegura nombres exactos: {`id,name`,`kind`,`lat`,`lon`,`h_m`,`f_MHz`,`erp_dBm`}.
 
-Revisa la consola del navegador: el payload se imprime antes del fetch.
+- Revisa la consola del navegador: el **payload** se imprime antes del fetch.
 
 </details> <details> <summary><b>404 o CORS bloqueado</b></summary>
 
-Confirma window.API_BASE y el origen del front (127.0.0.1 vs IP LAN).
+-  Confirma `window.API_BASE` y el origen del front (127.0.0.1 vs IP LAN).
 
-Variable OSIM_CORS en el backend debe incluir todos los orígenes usados por el front.
+- Variable `OSIM_CORS` en el backend debe incluir todos los orígenes usados por el front.
 
 </details> <details> <summary><b>No abre el modal o no hay resultados</b></summary>
 
-Verifica que se invoque initModal() y existan #tab_carriers, #tab_im2, #tab_im3.
+- Verifica que se invoque `initModal()` y existan `#tab_carriers`, `#tab_im2`, `#tab_im3`.
 
-Si la respuesta tiene items: [], puede ser por filtros muy restrictivos o falta de TX con f/potencia válidas.
+- Si la respuesta tiene `items: []`, puede ser por **filtros muy restrictivos** o falta de **TX con f/potencia** válidas.
 
 </details>
-6) Roadmap
 
- Modelo de propagación y pérdidas (topografía/clutter).
+## Roadmap
 
- Diagramas de antena, polarización, tilt.
+ - Propagación y pérdidas (topografía/clutter).
 
- Reporte PDF (figuras + tablas + parámetros).
+ - Diagramas de antena, polarización, tilt.
 
- Presets de filtros por usuario y editor visual.
+ - Reporte PDF (figuras + tablas + parámetros).
 
- Dataset/benchmarks para validar IM2/IM3 vs mediciones reales.
+ - Editor visual de filtros/presets por usuario.
 
-7) Licencia
+ - Dataset/benchmarks para validar IM2/IM3 vs mediciones reales.
 
-Autor: Omar J Tíjaro R, licencia libre, generada desde la Universidad Industrial de Santander.
+ ## Licencia
+ **Universidad Industrial de Santander** - **Agencia Nacional del Espectro**
+ - Autores: Omar J Tíjaro - Homero Ortega
