@@ -1,0 +1,48 @@
+{
+  "objetos": [
+    {
+      "+": "fm1",
+      "nombre": "FM 92.1",
+      "tipo": "antena",
+      "lat": 10.425431790437225,
+      "lon": -75.52533621964974,
+      "alt_terreno_m": 10,
+      "alt_sobre_terreno_m": 60,
+      "frecuencia_MHz": 92.1,
+      "potencia_dBm": 70
+    },
+    {
+      "id": "fm2",
+      "nombre": "FM 105.1",
+      "tipo": "antena",
+      "lat": 10.428561445512035,
+      "lon": -75.52062003599669,
+      "alt_terreno_m": 140,
+      "alt_sobre_terreno_m": 50,
+      "frecuencia_MHz": 105.1,
+      "potencia_dBm": 68
+    },
+    {
+      "id": "av1",
+      "nombre": "Avión",
+      "tipo": "avion",
+      "lat": 10.455,
+      "lon": -75.51,
+      "alt_terreno_m": 0,
+      "alt_sobre_terreno_m": 300,
+      "frecuencia_MHz": null,
+      "potencia_dBm": null,
+      "heading_deg": 190
+    },
+    {
+      "id": "rx1",
+      "nombre": "VHF COM RX",
+      "tipo": "receptor",
+      "lat": 10.448,
+      "lon": -75.515,
+      "alt_terreno_m": 3,
+      "alt_sobre_terreno_m": 15,
+      "frecuencia_MHz": 118.1
+    }
+  ]
+}
